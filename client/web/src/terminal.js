@@ -180,6 +180,8 @@ export class Terminal {
             this.println("  teleport <map_id> <x> <y> <private_uuid> Teleport to a position (requires registration)");
             this.println("  entities <map_id> <private_uuid> List all users on a map (requires registration)");
             this.println("  attributes <private_uuid>  Get player attributes (requires registration)");
+            this.println("  heal <private_uuid>        Heal yourself (requires registration)");
+            this.println("  attack <target_public_uuid> <attacker_private_uuid> Attack another entity (requires registration)");
             this.println("  clear                     Clear the terminal");
             this.println("  exit / quit               Close the client\n");
             return;
@@ -264,6 +266,25 @@ export class Terminal {
             this.socket.send(JSON.stringify({
                 type: "attributes",
                 private_uuid: parts[1]
+            }));
+        } else if (cmd === "heal") {
+            if (parts.length < 2) {
+                this.println("Error: Missing private_uuid. Usage: heal <private_uuid>");
+                return;
+            }
+            this.socket.send(JSON.stringify({
+                type: "heal",
+                private_uuid: parts[1]
+            }));
+        } else if (cmd === "attack") {
+            if (parts.length < 3) {
+                this.println("Error: Missing arguments. Usage: attack <target_public_uuid> <attacker_private_uuid>");
+                return;
+            }
+            this.socket.send(JSON.stringify({
+                type: "attack",
+                target_public_uuid: parts[1],
+                attacker_private_uuid: parts[2]
             }));
         } else {
             this.println(`Unknown command: '${cmd}'. Type 'help' for available commands.`);
@@ -364,6 +385,24 @@ export class Terminal {
             // Update the attributes display silently (don't print to terminal)
             if (data.attributes) {
                 this.updateAttributesDisplay(data.attributes);
+            }
+        } else if (data.type === "heal") {
+            if (data.status === "OK") {
+                this.println(`Healed for ${data.heal_amount} HP!`);
+                this.println(`Health: ${data.old_health} -> ${data.new_health}`);
+            } else {
+                this.println(`Heal failed.`);
+            }
+        } else if (data.type === "attack") {
+            if (data.status === "OK") {
+                this.println(`Attack successful!`);
+                this.println(`Damage dealt: ${data.damage}`);
+                this.println(`Target health: ${data.target_remaining_health}`);
+                if (data.entity_removed) {
+                    this.println(`Target destroyed!`);
+                }
+            } else {
+                this.println(`Attack failed.`);
             }
         } else if (data.type === "teleport") {
             this.println(`Teleport successful! Public UUID: ${data.public_uuid}`);
