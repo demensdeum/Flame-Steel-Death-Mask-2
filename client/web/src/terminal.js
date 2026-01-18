@@ -70,13 +70,16 @@ export class Terminal {
         };
 
         this.socket.onclose = () => {
-            this.println("--- Disconnected from server ---");
+            this.println("--- Disconnected from server. Reconnecting in 5s... ---");
+            setTimeout(() => this.connect(), 5000);
         };
 
         this.socket.onerror = (error) => {
-            this.println("WebSocket Error: " + error.message);
+            this.println("WebSocket Error. Reconnecting in 5s...");
+            this.socket.close();
         };
     }
+
 
     handleCommand(user_input) {
         user_input = user_input.trim();
