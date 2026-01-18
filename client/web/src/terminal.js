@@ -2,6 +2,10 @@ export class Terminal {
     constructor() {
         this.outputArea = document.getElementById("terminal-output");
         this.inputField = document.getElementById("terminal-input");
+        this.history = [];
+        this.historyIndex = -1;
+        this.currentInput = "";
+
 
         if (!this.outputArea || !this.inputField) {
             console.error("Terminal elements not found!");
@@ -12,9 +16,36 @@ export class Terminal {
             if (event.key === "Enter") {
                 const command = this.inputField.value;
                 this.handleCommand(command);
+                if (command.trim() !== "") {
+                    this.history.push(command);
+                }
+                this.historyIndex = -1;
                 this.inputField.value = "";
+            } else if (event.key === "ArrowUp") {
+                event.preventDefault();
+                if (this.history.length > 0) {
+                    if (this.historyIndex === -1) {
+                        this.currentInput = this.inputField.value;
+                        this.historyIndex = this.history.length - 1;
+                    } else if (this.historyIndex > 0) {
+                        this.historyIndex--;
+                    }
+                    this.inputField.value = this.history[this.historyIndex];
+                }
+            } else if (event.key === "ArrowDown") {
+                event.preventDefault();
+                if (this.historyIndex !== -1) {
+                    if (this.historyIndex < this.history.length - 1) {
+                        this.historyIndex++;
+                        this.inputField.value = this.history[this.historyIndex];
+                    } else {
+                        this.historyIndex = -1;
+                        this.inputField.value = this.currentInput;
+                    }
+                }
             }
         });
+
 
         this.connect();
     }
