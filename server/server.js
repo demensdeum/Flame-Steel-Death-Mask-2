@@ -32,11 +32,11 @@ function generateMap(id) {
     const grid = Array.from({ length: height }, () => Array(width).fill('X'));
 
     const rooms = [];
-    const numRooms = 5 + Math.floor(Math.random() * 4); // 5 to 9 rooms
+    const numRooms = 15 + Math.floor(Math.random() * 20); // 5 to 9 rooms
 
     for (let i = 0; i < numRooms; i++) {
-        const w = 3 + Math.floor(Math.random() * 3); // 3 to 6
-        const h = 3 + Math.floor(Math.random() * 3); // 3 to 6
+        const w = 3 + Math.floor(Math.random() * 10); // 3 to 6
+        const h = 3 + Math.floor(Math.random() * 10); // 3 to 6
         const x = Math.floor(Math.random() * (width - w - 2)) + 1;
         const y = Math.floor(Math.random() * (height - h - 2)) + 1;
 

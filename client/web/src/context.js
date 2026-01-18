@@ -7,8 +7,10 @@ import { GameSettings } from './gameSettings.js';
 import { debugPrint } from './runtime.js';
 import { Terminal } from './terminal.js';
 import { NavigationController } from './navigationController.js';
+import { MinimapController } from './minimapController.js';
 
 export class Context {
+
     constructor(debugEnabled) {
         this.isRunning = false;
         this.translator = new Translator();
@@ -25,6 +27,8 @@ export class Context {
         this.sceneController = new SceneController(canvas, false, gameSettings, false);
         this.terminal = new Terminal(this);
         this.navigationController = new NavigationController(this);
+        this.minimapController = new MinimapController(this);
+
 
 
 

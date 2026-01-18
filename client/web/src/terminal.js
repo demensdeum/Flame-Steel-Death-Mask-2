@@ -220,7 +220,9 @@ export class Terminal {
             this.println("--- End of Map ---\n");
 
             this.println("Constructing 3D Scene...");
+            this.context.minimapController.setGrid(grid);
             this.context.sceneController.removeAllSceneObjectsExceptCamera();
+
 
             const modelName = "com.demensdeum.flamesteeldeathmask2.wall";
 
@@ -290,8 +292,10 @@ export class Terminal {
 
                 this.context.sceneController.debugControls.target.set(targetX, height, targetZ);
                 this.context.sceneController.debugControls.update();
+                this.context.minimapController.update();
                 this.println(`Camera moved to player position: (${x}, ${z})`);
             }
+
 
 
         } else if (data.status === "OK") {

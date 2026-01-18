@@ -38,7 +38,9 @@ export class NavigationController {
 
         controls.target.set(targetX, camera.position.y, targetZ);
         controls.update();
+        this.context.minimapController.update();
     }
+
 
 
     moveForward() {
