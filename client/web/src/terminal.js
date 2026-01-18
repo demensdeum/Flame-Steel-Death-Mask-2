@@ -54,7 +54,59 @@ export class Terminal {
         });
 
 
+        this.attributesPollInterval = null;
+        this.privateUuidForAttributes = null;
+
         this.connect();
+    }
+
+    startAttributesPolling(privateUuid) {
+        this.privateUuidForAttributes = privateUuid;
+
+        // Stop any existing polling
+        if (this.attributesPollInterval) {
+            clearInterval(this.attributesPollInterval);
+        }
+
+        // Start polling every 4 seconds
+        this.attributesPollInterval = setInterval(() => {
+            if (this.socket.readyState === WebSocket.OPEN && this.privateUuidForAttributes) {
+                this.socket.send(JSON.stringify({
+                    type: "attributes",
+                    private_uuid: this.privateUuidForAttributes
+                }));
+            }
+        }, 4000);
+
+        // Do an immediate poll
+        if (this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify({
+                type: "attributes",
+                private_uuid: this.privateUuidForAttributes
+            }));
+        }
+    }
+
+    stopAttributesPolling() {
+        if (this.attributesPollInterval) {
+            clearInterval(this.attributesPollInterval);
+            this.attributesPollInterval = null;
+        }
+        this.privateUuidForAttributes = null;
+    }
+
+    updateAttributesDisplay(attributes) {
+        const healthSpan = document.getElementById('attr-health');
+        const attackSpan = document.getElementById('attr-attack');
+        const defenceSpan = document.getElementById('attr-defence');
+        const bitsSpan = document.getElementById('attr-bits');
+        const healsSpan = document.getElementById('attr-heals');
+
+        if (healthSpan) healthSpan.textContent = `${attributes.current_health}/${attributes.max_health}`;
+        if (attackSpan) attackSpan.textContent = attributes.attack;
+        if (defenceSpan) defenceSpan.textContent = attributes.defence;
+        if (bitsSpan) bitsSpan.textContent = attributes.bits;
+        if (healsSpan) healsSpan.textContent = attributes.heal_items || 0;
     }
 
     connect() {
@@ -156,11 +208,14 @@ export class Terminal {
                 this.println("Error: Missing arguments. Usage: register <private_uuid> <type>");
                 return;
             }
+            const privateUuid = parts[1];
             this.socket.send(JSON.stringify({
                 type: "register",
-                private_uuid: parts[1],
+                private_uuid: privateUuid,
                 entity_type: parts[2]
             }));
+            // Store for later use in registration response
+            this._lastRegisterPrivateUuid = privateUuid;
         } else if (cmd === "map") {
             if (parts.length < 3) {
                 this.println("Error: Missing arguments. Usage: map <map_id> <private_uuid>");
@@ -300,6 +355,16 @@ export class Terminal {
             this.println("Camera set to top-down view.");
         } else if (data.type === "register") {
             this.println(`Registration successful! Your public_uuid is: ${data.public_uuid}`);
+            // Auto-start attributes polling if we have a private_uuid
+            if (this._lastRegisterPrivateUuid) {
+                this.println("Starting attributes polling...");
+                this.startAttributesPolling(this._lastRegisterPrivateUuid);
+            }
+        } else if (data.type === "attributes") {
+            // Update the attributes display silently (don't print to terminal)
+            if (data.attributes) {
+                this.updateAttributesDisplay(data.attributes);
+            }
         } else if (data.type === "teleport") {
             this.println(`Teleport successful! Public UUID: ${data.public_uuid}`);
             if (this.lastTeleportX !== undefined && this.lastTeleportY !== undefined) {
