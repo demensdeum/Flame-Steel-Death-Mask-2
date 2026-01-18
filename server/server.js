@@ -83,12 +83,24 @@ connectMongo().then(() => {
                     console.log('Sent health check response:', response);
                 } else if (message.type === 'map') {
                     const mapId = message.id;
-                    if (!mapId) {
-                        ws.send(JSON.stringify({ error: 'Missing map id' }));
+                    const privateUuid = message.private_uuid;
+
+                    if (!mapId || !privateUuid) {
+                        ws.send(JSON.stringify({ error: 'Missing map id or private_uuid' }));
+                        return;
+                    }
+
+                    const usersCollection = db.collection('users');
+                    const user = await usersCollection.findOne({ private_uuid: privateUuid });
+
+                    if (!user) {
+                        console.log(`Unauthorized map request with private_uuid: ${privateUuid}`);
+                        ws.send(JSON.stringify({ error: 'Unauthorized: invalid private_uuid' }));
                         return;
                     }
 
                     const mapsCollection = db.collection('maps');
+
                     let map = await mapsCollection.findOne({ id: mapId });
 
                     if (!map) {
