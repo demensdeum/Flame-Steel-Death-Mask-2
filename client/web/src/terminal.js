@@ -7,6 +7,11 @@ export class Terminal {
         this.historyIndex = -1;
         this.currentInput = "";
 
+        this.lastTeleportMapId = null;
+        this.lastTeleportPrivateUuid = null;
+        this.lastTeleportX = undefined;
+        this.lastTeleportY = undefined;
+
         if (!this.outputArea || !this.inputField) {
             console.error("Terminal elements not found!");
             return;
@@ -137,25 +142,30 @@ export class Terminal {
                 this.println("Error: Missing arguments. Usage: map <map_id> <private_uuid>");
                 return;
             }
+            this.lastTeleportMapId = parts[1];
+            this.lastTeleportPrivateUuid = parts[2];
             this.socket.send(JSON.stringify({
                 type: "map",
-                id: parts[1],
-                private_uuid: parts[2]
+                id: this.lastTeleportMapId,
+                private_uuid: this.lastTeleportPrivateUuid
             }));
         } else if (cmd === "teleport") {
             if (parts.length < 5) {
                 this.println("Error: Missing arguments. Usage: teleport <map_id> <x> <y> <private_uuid>");
                 return;
             }
+            this.lastTeleportMapId = parts[1];
             this.lastTeleportX = parseInt(parts[2]);
             this.lastTeleportY = parseInt(parts[3]);
+            this.lastTeleportPrivateUuid = parts[4];
             this.socket.send(JSON.stringify({
                 type: "teleport",
-                map_id: parts[1],
+                map_id: this.lastTeleportMapId,
                 x: this.lastTeleportX,
                 y: this.lastTeleportY,
-                private_uuid: parts[4]
+                private_uuid: this.lastTeleportPrivateUuid
             }));
+
 
         } else if (cmd === "entities") {
             if (parts.length < 3) {
@@ -181,7 +191,26 @@ export class Terminal {
         }
     }
 
+    sendTeleport(mapId, x, y, uuid) {
+        if (this.socket.readyState !== WebSocket.OPEN) {
+            this.println("Error: Cannot teleport, socket is closed.");
+            return;
+        }
+        this.println(`>>> GUI Teleport to ${x}, ${y}`);
+        this.lastTeleportX = x;
+        this.lastTeleportY = y;
+        this.socket.send(JSON.stringify({
+            type: "teleport",
+            map_id: mapId,
+            x: x,
+            y: y,
+            private_uuid: uuid
+        }));
+    }
+
+
     handleServerResponse(data) {
+
         if (data.type === "map") {
             this.println("\n--- Map Received ---");
             const grid = data.data.grid;
@@ -252,10 +281,18 @@ export class Terminal {
                 const z = this.lastTeleportY; // y from grid is z in scene
                 const height = 1; // little bit higher
                 this.context.sceneController.camera.position.set(x, height, z);
-                this.context.sceneController.debugControls.target.set(x + 1, height, z); // look "forward"
+
+                // Respect the current facing direction from NavigationController
+                const rad = (this.context.navigationController.facingAngle * Math.PI) / 180;
+                const lookDistance = 1;
+                const targetX = x + Math.cos(rad) * lookDistance;
+                const targetZ = z + Math.sin(rad) * lookDistance;
+
+                this.context.sceneController.debugControls.target.set(targetX, height, targetZ);
                 this.context.sceneController.debugControls.update();
                 this.println(`Camera moved to player position: (${x}, ${z})`);
             }
+
 
         } else if (data.status === "OK") {
 

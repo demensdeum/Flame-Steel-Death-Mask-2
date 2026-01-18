@@ -6,6 +6,7 @@ import { SoundPlayer } from './soundPlayer.js';
 import { GameSettings } from './gameSettings.js';
 import { debugPrint } from './runtime.js';
 import { Terminal } from './terminal.js';
+import { NavigationController } from './navigationController.js';
 
 export class Context {
     constructor(debugEnabled) {
@@ -23,6 +24,8 @@ export class Context {
         const gameSettings = GameSettings.default();
         this.sceneController = new SceneController(canvas, false, gameSettings, false);
         this.terminal = new Terminal(this);
+        this.navigationController = new NavigationController(this);
+
 
 
         debugPrint("Game Context Initialized...");
