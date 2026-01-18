@@ -153,7 +153,8 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                                 attack: 1,
                                 defence: 1,
                                 current_health: 10,
-                                max_health: 10
+                                max_health: 10,
+                                heal_items: 0
                             }
                         };
                         await usersCollection.insertOne(user);
@@ -265,6 +266,50 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                         type: 'attributes',
                         public_uuid: user.public_uuid,
                         attributes: user.attributes
+                    }));
+                } else if (message.type === 'heal') {
+                    const { private_uuid } = message;
+
+                    if (!private_uuid) {
+                        ws.send(JSON.stringify({ error: 'Missing private_uuid' }));
+                        return;
+                    }
+
+                    const usersCollection = db.collection('users');
+                    const user = await usersCollection.findOne({ private_uuid: private_uuid });
+
+                    if (!user) {
+                        console.log(`Unauthorized heal request with private_uuid: ${private_uuid}`);
+                        ws.send(JSON.stringify({ error: 'Unauthorized: invalid private_uuid' }));
+                        return;
+                    }
+
+                    // Calculate heal amount: 25% of max_health + random(0, max_health)
+                    const baseHeal = Math.floor(user.attributes.max_health * 0.25);
+                    const randomBonus = Math.floor(Math.random() * (user.attributes.max_health + 1));
+                    const totalHeal = baseHeal + randomBonus;
+
+                    const oldHealth = user.attributes.current_health;
+                    const newHealth = Math.min(
+                        user.attributes.max_health,
+                        user.attributes.current_health + totalHeal
+                    );
+
+                    // Update health in database
+                    await usersCollection.updateOne(
+                        { private_uuid: private_uuid },
+                        { $set: { 'attributes.current_health': newHealth } }
+                    );
+
+                    console.log(`Heal: ${user.public_uuid} healed for ${totalHeal} (base: ${baseHeal}, bonus: ${randomBonus}). Health: ${oldHealth} -> ${newHealth}`);
+
+                    ws.send(JSON.stringify({
+                        type: 'heal',
+                        status: 'OK',
+                        heal_amount: totalHeal,
+                        old_health: oldHealth,
+                        new_health: newHealth,
+                        max_health: user.attributes.max_health
                     }));
                 } else if (message.type === 'attack') {
                     const { target_public_uuid, attacker_private_uuid } = message;
