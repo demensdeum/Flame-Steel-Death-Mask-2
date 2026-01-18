@@ -139,9 +139,20 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                     if (!user) {
                         console.log(`New user registration for ${privateUuid}`);
                         const publicUuid = crypto.randomUUID();
-                        user = { private_uuid: privateUuid, public_uuid: publicUuid };
+                        user = {
+                            private_uuid: privateUuid,
+                            public_uuid: publicUuid,
+                            attributes: {
+                                bits: 0,
+                                attack: 1,
+                                defence: 1,
+                                current_health: 10,
+                                max_health: 10
+                            }
+                        };
                         await usersCollection.insertOne(user);
                     } else {
+
                         console.log(`User ${privateUuid} already registered.`);
                     }
 
@@ -179,13 +190,23 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                     console.log(`User ${private_uuid} teleported to ${map_id} at (${x}, ${y})`);
                     ws.send(JSON.stringify({ type: 'teleport', status: 'OK', public_uuid: user.public_uuid }));
                 } else if (message.type === 'entities') {
-                    const { map_id } = message;
-                    if (!map_id) {
-                        ws.send(JSON.stringify({ error: 'Missing map_id' }));
+                    const { map_id, private_uuid } = message;
+                    if (!map_id || !private_uuid) {
+                        ws.send(JSON.stringify({ error: 'Missing map_id or private_uuid' }));
+                        return;
+                    }
+
+                    const usersCollection = db.collection('users');
+                    const user = await usersCollection.findOne({ private_uuid: private_uuid });
+
+                    if (!user) {
+                        console.log(`Unauthorized entities request with private_uuid: ${private_uuid}`);
+                        ws.send(JSON.stringify({ error: 'Unauthorized: invalid private_uuid' }));
                         return;
                     }
 
                     const keys = await redisClient.keys('user:pos:*');
+
                     const entities = [];
 
                     for (const key of keys) {
@@ -204,7 +225,29 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                     }
 
                     ws.send(JSON.stringify({ type: 'entities', map_id, entities }));
+                } else if (message.type === 'attributes') {
+                    const { private_uuid } = message;
+                    if (!private_uuid) {
+                        ws.send(JSON.stringify({ error: 'Missing private_uuid' }));
+                        return;
+                    }
+
+                    const usersCollection = db.collection('users');
+                    const user = await usersCollection.findOne({ private_uuid: private_uuid });
+
+                    if (!user) {
+                        console.log(`Unauthorized attributes request with private_uuid: ${private_uuid}`);
+                        ws.send(JSON.stringify({ error: 'Unauthorized: invalid private_uuid' }));
+                        return;
+                    }
+
+                    ws.send(JSON.stringify({
+                        type: 'attributes',
+                        public_uuid: user.public_uuid,
+                        attributes: user.attributes
+                    }));
                 }
+
 
 
             } catch (error) {

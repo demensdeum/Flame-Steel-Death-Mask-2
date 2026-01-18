@@ -32,7 +32,8 @@ async def client():
                     print("  register <private_uuid>    Register a new user or retrieve public_uuid")
                     print("  map <map_id> <private_uuid> Request a procedural map (requires registration)")
                     print("  teleport <map_id> <x> <y> <private_uuid> Teleport to a position (requires registration)")
-                    print("  entities <map_id>          List all users on a map")
+                    print("  entities <map_id> <private_uuid> List all users on a map (requires registration)")
+                    print("  attributes <private_uuid>  Get player attributes (requires registration)")
                     print("  exit / quit               Close the client\n")
                     continue
                 elif cmd == "health":
@@ -66,13 +67,24 @@ async def client():
                         "private_uuid": parts[4]
                     }))
                 elif cmd == "entities":
-                    if len(parts) < 2:
-                        print("Error: Missing map_id. Usage: entities <map_id>")
+                    if len(parts) < 3:
+                        print("Error: Missing arguments. Usage: entities <map_id> <private_uuid>")
                         continue
                     await websocket.send(json.dumps({
                         "type": "entities",
-                        "map_id": parts[1]
+                        "map_id": parts[1],
+                        "private_uuid": parts[2]
                     }))
+                elif cmd == "attributes":
+                    if len(parts) < 2:
+                        print("Error: Missing private_uuid. Usage: attributes <private_uuid>")
+                        continue
+                    await websocket.send(json.dumps({
+                        "type": "attributes",
+                        "private_uuid": parts[1]
+                    }))
+
+
 
 
                 else:
