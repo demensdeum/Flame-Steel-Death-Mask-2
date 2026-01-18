@@ -22,7 +22,8 @@ export class Context {
         const canvas = this.canvas;
         const gameSettings = GameSettings.default();
         this.sceneController = new SceneController(canvas, false, gameSettings, false);
-        this.terminal = new Terminal();
+        this.terminal = new Terminal(this);
+
 
         debugPrint("Game Context Initialized...");
     }

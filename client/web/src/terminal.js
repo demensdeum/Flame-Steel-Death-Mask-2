@@ -1,11 +1,11 @@
 export class Terminal {
-    constructor() {
+    constructor(context) {
+        this.context = context;
         this.outputArea = document.getElementById("terminal-output");
         this.inputField = document.getElementById("terminal-input");
         this.history = [];
         this.historyIndex = -1;
         this.currentInput = "";
-
 
         if (!this.outputArea || !this.inputField) {
             console.error("Terminal elements not found!");
@@ -176,13 +176,46 @@ export class Terminal {
     handleServerResponse(data) {
         if (data.type === "map") {
             this.println("\n--- Map Received ---");
-            data.data.grid.forEach(row => {
+            const grid = data.data.grid;
+            grid.forEach(row => {
                 this.println(row);
             });
             this.println("--- End of Map ---\n");
+
+            this.println("Constructing 3D Scene...");
+            this.context.sceneController.removeAllSceneObjectsExceptCamera();
+
+            const modelName = "com.demensdeum.flamesteeldeathmask2.wall";
+
+            for (let y = 0; y < grid.length; y++) {
+                const row = grid[y];
+                for (let x = 0; x < row.length; x++) {
+                    const char = row[x];
+                    const name = `block_${x}_${y}`;
+                    if (char === 'X') {
+                        this.context.sceneController.addModelAt(name, modelName, x, 1, y, 0, 0, 0, false, null);
+                    } else if (char === '_') {
+                        this.context.sceneController.addModelAt(name, modelName, x, 0, y, 0, 0, 0, false, null);
+                    }
+                }
+            }
+            this.println("3D Scene Construction Complete.");
+
+            // Top-down camera view
+            const mazeHeight = grid.length;
+            const mazeWidth = grid[0].length;
+            const centerX = mazeWidth / 2;
+            const centerZ = mazeHeight / 2;
+            const viewDistance = Math.max(mazeWidth, mazeHeight) * 1.2;
+
+            this.context.sceneController.camera.position.set(centerX, viewDistance, centerZ);
+            this.context.sceneController.debugControls.target.set(centerX, 0, centerZ);
+            this.context.sceneController.debugControls.update();
+            this.println("Camera set to top-down view.");
         } else if (data.type === "register") {
             this.println(`Registration successful! Your public_uuid is: ${data.public_uuid}`);
         } else if (data.status === "OK") {
+
             this.println("Server status: OK");
         } else if (data.error) {
             this.println(`Server error: ${data.error}`);
@@ -191,6 +224,7 @@ export class Terminal {
             this.println(JSON.stringify(data, null, 2));
         }
     }
+
 
     println(text) {
         const line = document.createElement("div");
