@@ -32,6 +32,7 @@ async def client():
                     print("  register <private_uuid>    Register a new user or retrieve public_uuid")
                     print("  map <map_id> <private_uuid> Request a procedural map (requires registration)")
                     print("  teleport <map_id> <x> <y> <private_uuid> Teleport to a position (requires registration)")
+                    print("  entities <map_id>          List all users on a map")
                     print("  exit / quit               Close the client\n")
                     continue
                 elif cmd == "health":
@@ -64,6 +65,15 @@ async def client():
                         "y": int(parts[3]),
                         "private_uuid": parts[4]
                     }))
+                elif cmd == "entities":
+                    if len(parts) < 2:
+                        print("Error: Missing map_id. Usage: entities <map_id>")
+                        continue
+                    await websocket.send(json.dumps({
+                        "type": "entities",
+                        "map_id": parts[1]
+                    }))
+
 
                 else:
                     print(f"Unknown command: '{cmd}'. Type 'help' for available commands.")

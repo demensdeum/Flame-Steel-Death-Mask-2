@@ -178,7 +178,34 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
 
                     console.log(`User ${private_uuid} teleported to ${map_id} at (${x}, ${y})`);
                     ws.send(JSON.stringify({ type: 'teleport', status: 'OK', public_uuid: user.public_uuid }));
+                } else if (message.type === 'entities') {
+                    const { map_id } = message;
+                    if (!map_id) {
+                        ws.send(JSON.stringify({ error: 'Missing map_id' }));
+                        return;
+                    }
+
+                    const keys = await redisClient.keys('user:pos:*');
+                    const entities = [];
+
+                    for (const key of keys) {
+                        const data = await redisClient.get(key);
+                        if (data) {
+                            const entity = JSON.parse(data);
+                            if (entity.map_id === map_id) {
+                                entities.push({
+                                    public_uuid: entity.public_uuid,
+                                    x: entity.x,
+                                    y: entity.y,
+                                    map_id: entity.map_id
+                                });
+                            }
+                        }
+                    }
+
+                    ws.send(JSON.stringify({ type: 'entities', map_id, entities }));
                 }
+
 
             } catch (error) {
                 console.error('Error processing message:', error);
