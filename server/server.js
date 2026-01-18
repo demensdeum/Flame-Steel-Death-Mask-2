@@ -1,5 +1,6 @@
 const { WebSocketServer } = require('ws');
 const { MongoClient } = require('mongodb');
+const crypto = require('crypto');
 
 const mongoUrl = process.env.MONGO_URL || 'mongodb://localhost:27017';
 const dbName = 'gameServer';
@@ -99,6 +100,26 @@ connectMongo().then(() => {
                     }
 
                     ws.send(JSON.stringify({ type: 'map', data: map }));
+                } else if (message.type === 'register') {
+                    const privateUuid = message.private_uuid;
+                    if (!privateUuid) {
+                        ws.send(JSON.stringify({ error: 'Missing private_uuid' }));
+                        return;
+                    }
+
+                    const usersCollection = db.collection('users');
+                    let user = await usersCollection.findOne({ private_uuid: privateUuid });
+
+                    if (!user) {
+                        console.log(`New user registration for ${privateUuid}`);
+                        const publicUuid = crypto.randomUUID();
+                        user = { private_uuid: privateUuid, public_uuid: publicUuid };
+                        await usersCollection.insertOne(user);
+                    } else {
+                        console.log(`User ${privateUuid} already registered.`);
+                    }
+
+                    ws.send(JSON.stringify({ type: 'register', public_uuid: user.public_uuid }));
                 }
             } catch (error) {
                 console.error('Error processing message:', error);
