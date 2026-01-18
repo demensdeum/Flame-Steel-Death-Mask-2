@@ -5,10 +5,7 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { Utils } from "./utils.js";
 import { SceneObject } from "./sceneObject.js";
-import * as dat from "dat.gui";
 import { Names } from "./names.js";
-import { SimplePhysicsController } from "./simplePhysicsController.js";
-import { PhysicsControllerCollisionDirection } from "./physicsControllerCollisionDirection.js";
 import { debugPrint, raiseCriticalError } from "./runtime.js";
 import { Paths } from "./paths.js";
 import { SceneObjectCommandTeleport } from "./sceneObjectCommandTeleport.js";
@@ -20,12 +17,8 @@ import { CSS3DRenderer } from "three/examples/jsm/renderers/CSS3DRenderer.js";
 import { CSS3DObject } from "three/examples/jsm/renderers/CSS3DRenderer.js";
 import { GameVector3 } from "./gameVector3.js";
 import { GameCssObject3D } from "./gameCssObject3D.js";
-const gui = new dat.GUI({ autoPlace: false });
-var moveGUIElement = document.querySelector('.moveGUI');
-var guiDomElement = gui.domElement;
-moveGUIElement?.appendChild(guiDomElement);
 export class SceneController {
-    constructor(canvas, physicsController, physicsEnabled, gameSettings, flyMode = false) {
+    constructor(canvas, physicsEnabled, gameSettings, flyMode = false) {
         this.userObjectName = "";
         this.stepCounter = 0;
         this.texturesToLoad = [];
@@ -49,15 +42,6 @@ export class SceneController {
         this.physicsEnabled = physicsEnabled;
         this.gameSettings = gameSettings;
         this.flyMode = flyMode;
-        this.physicsController = physicsController;
-        this.physicsController.delegate = this;
-        if (this.flyMode &&
-            this.physicsController instanceof SimplePhysicsController) {
-            this.physicsController.enabled = false;
-        }
-        if (physicsController instanceof SimplePhysicsController) {
-            physicsController.simplePhysicsControllerDelegate = this;
-        }
         this.loadingPlaceholderTexture = this.textureLoader.load(Paths.texturePath("com.demensdeum.loading"));
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, this.windowWidth() / this.windowHeight(), 0.1, 1000);
@@ -129,63 +113,6 @@ export class SceneController {
         debugPrint("windowHeight: " + window.innerHeight);
         return window.innerHeight;
     }
-    physicControllerRequireApplyPosition(objectName, _, position) {
-        this.sceneObject(objectName).threeObject.position.x = position.x;
-        this.sceneObject(objectName).threeObject.position.y = position.y;
-        this.sceneObject(objectName).threeObject.position.z = position.z;
-    }
-    physicsControllerDidDetectFreeSpace(_, __, direction) {
-        switch (direction) {
-            case PhysicsControllerCollisionDirection.Down:
-                break;
-            case PhysicsControllerCollisionDirection.Front:
-                this.canMoveForward = true;
-            case PhysicsControllerCollisionDirection.Back:
-                this.canMoveBackward = true;
-            case PhysicsControllerCollisionDirection.Left:
-                this.canMoveLeft = true;
-            case PhysicsControllerCollisionDirection.Right:
-                this.canMoveRight = true;
-        }
-    }
-    physicsControllerDidDetectDistance(_, collision) {
-        if (this.flyMode) {
-            this.canMoveForward = true;
-            this.canMoveBackward = true;
-            this.canMoveLeft = true;
-            this.canMoveRight = true;
-        }
-        const alice = collision.alice;
-        const bob = collision.bob;
-        const direction = collision.direction;
-        const distance = collision.distance;
-        if (alice.name == this.userObjectName &&
-            bob.name == "Map" &&
-            direction == PhysicsControllerCollisionDirection.Front) {
-            this.canMoveForward = distance > 0.3;
-        }
-        if (alice.name == this.userObjectName &&
-            bob.name == "Map" &&
-            direction == PhysicsControllerCollisionDirection.Back) {
-            this.canMoveBackward = distance > 0.3;
-        }
-        if (alice.name == this.userObjectName &&
-            bob.name == "Map" &&
-            direction == PhysicsControllerCollisionDirection.Left) {
-            this.canMoveLeft = distance > 0.3;
-        }
-        if (alice.name == this.userObjectName &&
-            bob.name == "Map" &&
-            direction == PhysicsControllerCollisionDirection.Right) {
-            this.canMoveRight = distance > 0.3;
-        }
-    }
-    simplePhysicControllerRequireToAddArrowHelperToScene(_, arrowHelper) {
-        this.scene.add(arrowHelper);
-    }
-    simplePhysicsControllerRequireToDeleteArrowHelperFromScene(_, arrowHelper) {
-        this.scene.remove(arrowHelper);
-    }
     decorControlsDidRequestCommandWithName(_, commandName) {
         if (commandName in this.commands) {
             return this.commands[commandName];
@@ -208,7 +135,6 @@ export class SceneController {
     }
     controlsRequireJump(_, objectName) {
         const sceneObject = this.sceneObject(objectName);
-        this.physicsController.requireJump(sceneObject);
     }
     controlsRequireObjectTranslate(_, objectName, x, y, z) {
         this.translateObject(objectName, x, y, z);
@@ -284,16 +210,9 @@ export class SceneController {
         }
         const delta = this.clock.getDelta();
         this.controlsStep(delta);
-        if (this.physicsController) {
-            if (this.physicsController instanceof SimplePhysicsController) {
-                this.physicsController.enabled = this.physicsEnabled;
-            }
-            this.physicsController.step(delta);
-        }
         this.weatherController?.step(delta);
         this.animationsStep(delta);
         this.render();
-        this.updateUI();
     }
     controlsStep(delta) {
         Object.keys(this.objects).forEach(key => {
@@ -405,7 +324,6 @@ export class SceneController {
         this.objectsUUIDs[sceneObject.uuid] = sceneObject;
         this.objects[sceneObject.name] = sceneObject;
         this.scene.add(sceneObject.threeObject);
-        this.physicsController.addSceneObject(sceneObject);
         this.objectsPickerController.addSceneObject(sceneObject);
     }
     alert(args) {
@@ -658,11 +576,6 @@ export class SceneController {
         const buttonSceneObject = new SceneObject(name, "Button", "", "", box, false, null, new Date().getTime());
         this.objects[name] = buttonSceneObject;
     }
-    updateUI() {
-        for (const i in gui.__controllers) {
-            gui.__controllers[i].updateDisplay();
-        }
-    }
     removeAllSceneObjectsExceptCamera() {
         Object.keys(this.objects).map(k => {
             if (k == Names.Camera) {
@@ -691,7 +604,6 @@ export class SceneController {
             debugger;
             return;
         }
-        this.physicsController.removeSceneObject(sceneObject);
         this.objectsPickerController.removeSceneObject(sceneObject);
         this.scene.remove(sceneObject.threeObject);
         delete this.objects[name];
@@ -718,11 +630,11 @@ export class SceneController {
             .setDataType(THREE.HalfFloatType)
             .setPath("./" + Paths.assetsDirectory + "/")
             .load(Paths.environmentPath(args.name), (texture) => {
-            var environmentMap = pmremGenerator.fromEquirectangular(texture).texture;
-            this.scene.environment = environmentMap;
-            texture.dispose();
-            pmremGenerator.dispose();
-        });
+                var environmentMap = pmremGenerator.fromEquirectangular(texture).texture;
+                this.scene.environment = environmentMap;
+                texture.dispose();
+                pmremGenerator.dispose();
+            });
         this.currentSkyboxName = args.name;
     }
     setBackgroundColor(red, green, blue) {

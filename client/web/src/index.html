@@ -8,4 +8,13 @@
 <body>
   <script src="eruda.js"></script>
   <canvas class="webgl"></canvas>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./three/three.module.js",
+        "three/examples/": "./three/examples/"
+      }
+    }
+  </script>
+  <script type="module" src="main.js"></script>
 </body>
