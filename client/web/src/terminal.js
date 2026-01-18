@@ -58,10 +58,13 @@ export class Terminal {
     }
 
     connect() {
-        this.socket = new WebSocket("ws://localhost:8080");
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${window.location.host}/socket`;
+        this.socket = new WebSocket(wsUrl);
 
         this.socket.onopen = () => {
-            this.println("--- Connected to ws://localhost:8080 ---");
+            this.println(`--- Connected to ${wsUrl} ---`);
+
             this.println("Type 'help' for a list of commands.");
         };
 
