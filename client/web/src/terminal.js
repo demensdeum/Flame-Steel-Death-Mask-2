@@ -58,12 +58,33 @@ export class Terminal {
     }
 
     connect() {
+        if (this.socket) {
+            // Clean up old socket to prevent multiple listeners or loops
+            this.socket.onclose = null;
+            this.socket.onerror = null;
+            this.socket.onmessage = null;
+            this.socket.onopen = null;
+            this.socket.close();
+        }
+
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsUrl = `${protocol}//${window.location.host}/socket`;
+
+        // Get current path and ensure it ends with a slash if not just root
+        let path = window.location.pathname;
+        if (path.endsWith('.html')) {
+            path = path.substring(0, path.lastIndexOf('/'));
+        }
+        if (!path.endsWith('/')) {
+            path += '/';
+        }
+        // Subpath will be like "/flame-steel-death-mask-2/"
+        // We append socket to it
+        const wsUrl = `${protocol}//${window.location.host}${path}socket`;
         this.socket = new WebSocket(wsUrl);
 
         this.socket.onopen = () => {
             this.println(`--- Connected to ${wsUrl} ---`);
+
 
             this.println("Type 'help' for a list of commands.");
         };
