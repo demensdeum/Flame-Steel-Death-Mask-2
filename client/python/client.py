@@ -31,6 +31,7 @@ async def client():
                     print("  health                     Check server status")
                     print("  register <private_uuid>    Register a new user or retrieve public_uuid")
                     print("  map <map_id> <private_uuid> Request a procedural map (requires registration)")
+                    print("  teleport <map_id> <x> <y> <private_uuid> Teleport to a position (requires registration)")
                     print("  exit / quit               Close the client\n")
                     continue
                 elif cmd == "health":
@@ -52,6 +53,18 @@ async def client():
                         "id": parts[1],
                         "private_uuid": parts[2]
                     }))
+                elif cmd == "teleport":
+                    if len(parts) < 5:
+                        print("Error: Missing arguments. Usage: teleport <map_id> <x> <y> <private_uuid>")
+                        continue
+                    await websocket.send(json.dumps({
+                        "type": "teleport",
+                        "map_id": parts[1],
+                        "x": int(parts[2]),
+                        "y": int(parts[3]),
+                        "private_uuid": parts[4]
+                    }))
+
                 else:
                     print(f"Unknown command: '{cmd}'. Type 'help' for available commands.")
                     continue

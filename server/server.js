@@ -1,10 +1,15 @@
 const { WebSocketServer } = require('ws');
 const { MongoClient } = require('mongodb');
 const crypto = require('crypto');
+const { createClient } = require('redis');
+
 
 const mongoUrl = process.env.MONGO_URL || 'mongodb://localhost:27017';
 const dbName = 'gameServer';
 let db;
+
+const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+let redisClient;
 
 async function connectMongo() {
     const client = new MongoClient(mongoUrl);
@@ -12,6 +17,14 @@ async function connectMongo() {
     console.log('Connected to MongoDB');
     db = client.db(dbName);
 }
+
+async function connectRedis() {
+    redisClient = createClient({ url: redisUrl });
+    redisClient.on('error', (err) => console.log('Redis Client Error', err));
+    await redisClient.connect();
+    console.log('Connected to Redis');
+}
+
 
 function generateMap(id) {
     const width = 100;
@@ -64,9 +77,10 @@ function generateMap(id) {
 
 const port = process.env.PORT || 8080;
 
-connectMongo().then(() => {
+Promise.all([connectMongo(), connectRedis()]).then(() => {
     const wss = new WebSocketServer({ port });
     console.log(`WebSocket server started on port ${port}`);
+
 
     wss.on('connection', (ws) => {
 
@@ -132,7 +146,40 @@ connectMongo().then(() => {
                     }
 
                     ws.send(JSON.stringify({ type: 'register', public_uuid: user.public_uuid }));
+                } else if (message.type === 'teleport') {
+                    const { map_id, x, y, private_uuid } = message;
+
+                    if (!map_id || x === undefined || y === undefined || !private_uuid) {
+                        ws.send(JSON.stringify({ error: 'Missing parameters for teleport' }));
+                        return;
+                    }
+
+                    const usersCollection = db.collection('users');
+                    const user = await usersCollection.findOne({ private_uuid: private_uuid });
+
+                    if (!user) {
+                        console.log(`Unauthorized teleport request with private_uuid: ${private_uuid}`);
+                        ws.send(JSON.stringify({ error: 'Unauthorized: invalid private_uuid' }));
+                        return;
+                    }
+
+                    const userData = {
+                        private_uuid: user.private_uuid,
+                        public_uuid: user.public_uuid,
+                        x,
+                        y,
+                        map_id
+                    };
+
+                    const redisKey = `user:pos:${private_uuid}`;
+                    await redisClient.set(redisKey, JSON.stringify(userData), {
+                        EX: 600 // 10 minutes
+                    });
+
+                    console.log(`User ${private_uuid} teleported to ${map_id} at (${x}, ${y})`);
+                    ws.send(JSON.stringify({ type: 'teleport', status: 'OK', public_uuid: user.public_uuid }));
                 }
+
             } catch (error) {
                 console.error('Error processing message:', error);
                 ws.send(JSON.stringify({ error: 'Internal server error or invalid protocol' }));
