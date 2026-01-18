@@ -5,6 +5,8 @@ import { Translator } from './translator.js';
 import { SoundPlayer } from './soundPlayer.js';
 import { GameSettings } from './gameSettings.js';
 import { debugPrint } from './runtime.js';
+import { Terminal } from './terminal.js';
+
 export class Context {
     constructor(debugEnabled) {
         this.isRunning = false;
@@ -20,6 +22,8 @@ export class Context {
         const canvas = this.canvas;
         const gameSettings = GameSettings.default();
         this.sceneController = new SceneController(canvas, false, gameSettings, false);
+        this.terminal = new Terminal();
+
         debugPrint("Game Context Initialized...");
     }
     start(state) {
