@@ -266,6 +266,115 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                         public_uuid: user.public_uuid,
                         attributes: user.attributes
                     }));
+                } else if (message.type === 'attack') {
+                    const { target_public_uuid, attacker_private_uuid } = message;
+
+                    if (!target_public_uuid || !attacker_private_uuid) {
+                        ws.send(JSON.stringify({ error: 'Missing target_public_uuid or attacker_private_uuid' }));
+                        return;
+                    }
+
+                    // 1. Authenticate attacker
+                    const usersCollection = db.collection('users');
+                    const attacker = await usersCollection.findOne({ private_uuid: attacker_private_uuid });
+
+                    if (!attacker) {
+                        console.log(`Unauthorized attack request with private_uuid: ${attacker_private_uuid}`);
+                        ws.send(JSON.stringify({ error: 'Unauthorized: invalid attacker_private_uuid' }));
+                        return;
+                    }
+
+                    // 2. Get attacker position from Redis
+                    const attackerRedisKey = `user:pos:${attacker_private_uuid}`;
+                    const attackerPosData = await redisClient.get(attackerRedisKey);
+
+                    if (!attackerPosData) {
+                        ws.send(JSON.stringify({ error: 'Attacker position not found. Must teleport first.' }));
+                        return;
+                    }
+
+                    const attackerPos = JSON.parse(attackerPosData);
+
+                    // 3. Find target entity in Redis
+                    const keys = await redisClient.keys('user:pos:*');
+                    let targetPos = null;
+                    let targetPrivateUuid = null;
+
+                    for (const key of keys) {
+                        const data = await redisClient.get(key);
+                        if (data) {
+                            const entity = JSON.parse(data);
+                            if (entity.public_uuid === target_public_uuid) {
+                                targetPos = entity;
+                                targetPrivateUuid = entity.private_uuid;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!targetPos) {
+                        ws.send(JSON.stringify({ error: 'Target not found or not on any map' }));
+                        return;
+                    }
+
+                    // 4. Validate same map
+                    if (attackerPos.map_id !== targetPos.map_id) {
+                        ws.send(JSON.stringify({ error: 'Target is on a different map' }));
+                        return;
+                    }
+
+                    // 5. Validate distance (must be exactly 1 cell, horizontal or vertical)
+                    const manhattanDistance = Math.abs(attackerPos.x - targetPos.x) + Math.abs(attackerPos.y - targetPos.y);
+
+                    if (manhattanDistance !== 1) {
+                        ws.send(JSON.stringify({ error: 'Target must be exactly 1 cell away (horizontally or vertically)' }));
+                        return;
+                    }
+
+                    // 6. Get target user attributes
+                    const target = await usersCollection.findOne({ private_uuid: targetPrivateUuid });
+
+                    if (!target) {
+                        ws.send(JSON.stringify({ error: 'Target user not found in database' }));
+                        return;
+                    }
+
+                    // 7. Calculate damage: max(0, attacker.attack - random(0, target.defence))
+                    const defenceReduction = Math.floor(Math.random() * (target.attributes.defence + 1));
+                    const damage = Math.max(0, attacker.attributes.attack - defenceReduction);
+
+                    // 8. Update target health
+                    const newHealth = Math.max(0, target.attributes.current_health - damage);
+                    await usersCollection.updateOne(
+                        { private_uuid: targetPrivateUuid },
+                        { $set: { 'attributes.current_health': newHealth } }
+                    );
+
+                    console.log(`Attack: ${attacker.public_uuid} attacked ${target.public_uuid} for ${damage} damage. Target health: ${target.attributes.current_health} -> ${newHealth}`);
+
+                    // 9. Check if target is dead (filter type only)
+                    let entityRemoved = false;
+                    if (newHealth <= 0 && target.type === 'filter') {
+                        // Remove from MongoDB
+                        await usersCollection.deleteOne({ private_uuid: targetPrivateUuid });
+
+                        // Remove from Redis
+                        const targetRedisKey = `user:pos:${targetPrivateUuid}`;
+                        await redisClient.del(targetRedisKey);
+
+                        entityRemoved = true;
+                        console.log(`Filter entity ${target.public_uuid} removed (health <= 0)`);
+                    }
+
+                    // 10. Send response
+                    ws.send(JSON.stringify({
+                        type: 'attack',
+                        status: 'OK',
+                        damage: damage,
+                        target_public_uuid: target.public_uuid,
+                        target_remaining_health: newHealth,
+                        entity_removed: entityRemoved
+                    }));
                 }
 
 
