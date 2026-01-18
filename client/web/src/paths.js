@@ -27,7 +27,7 @@ export class Paths {
         return name + ".skybox.right";
     }
 }
-Paths.assetsDirectory = ".";
+Paths.assetsDirectory = "";
 Paths.textureExtension = "jpg";
 Paths.modelExtension = "glb";
 Paths.skyboxEnvironmentExtension = "hdr";

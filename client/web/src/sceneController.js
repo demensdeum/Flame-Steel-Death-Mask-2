@@ -13,10 +13,8 @@ import { SceneObjectCommandIdle } from "./sceneObjectCommandIdle.js";
 import { SceneObjectCommandTranslate } from "./sceneObjectCommandTranslate.js";
 import { ObjectsPickerController } from "./objectsPickerController.js";
 import { AnimationContainer } from "./animationContainer.js";
-import { CSS3DRenderer } from "three/examples/jsm/renderers/CSS3DRenderer.js";
-import { CSS3DObject } from "three/examples/jsm/renderers/CSS3DRenderer.js";
 import { GameVector3 } from "./gameVector3.js";
-import { GameCssObject3D } from "./gameCssObject3D.js";
+
 export class SceneController {
     constructor(canvas, physicsEnabled, gameSettings, flyMode = false) {
         this.userObjectName = "";
@@ -37,8 +35,6 @@ export class SceneController {
         this.delegate = null;
         this.highQuality = false;
         this.shadowsEnabled = true;
-        this.cssObjects3D = {};
-        this.renderers = [];
         this.physicsEnabled = physicsEnabled;
         this.gameSettings = gameSettings;
         this.flyMode = flyMode;
@@ -47,9 +43,7 @@ export class SceneController {
         this.camera = new THREE.PerspectiveCamera(75, this.windowWidth() / this.windowHeight(), 0.1, 1000);
         const cameraSceneObject = new SceneObject(Names.Camera, Names.Camera, "NONE", "NONE", this.camera, true, null, new Date().getTime());
         this.objects[Names.Camera] = cameraSceneObject;
-        this.css3DRendererBottom = new CSS3DRenderer();
-        this.css3DRendererBottom.domElement.style.position = "absolute";
-        document.querySelector("#css-canvas-bottom")?.appendChild(this.css3DRendererBottom.domElement);
+
         this.renderer = new THREE.WebGLRenderer({
             canvas: canvas,
             antialias: true,
@@ -57,15 +51,8 @@ export class SceneController {
         });
         this.renderer.domElement.style.position = 'absolute';
         this.renderer.domElement.style.top = '0';
-        this.css3DRendererTop = new CSS3DRenderer();
-        this.css3DRendererTop.domElement.style.position = "absolute";
-        document.querySelector("#css-canvas-top")?.appendChild(this.css3DRendererTop.domElement);
-        this.renderers.push(this.css3DRendererBottom);
-        this.renderers.push(this.renderer);
-        this.renderers.push(this.css3DRendererTop);
-        this.renderers.forEach((renderer) => {
-            renderer.setSize(this.windowWidth(), this.windowHeight());
-        });
+        this.renderer.setSize(this.windowWidth(), this.windowHeight());
+
         if (this.highQuality) {
             this.renderer.setPixelRatio(window.devicePixelRatio);
         }
@@ -86,9 +73,10 @@ export class SceneController {
             debugPrint("onWindowResize");
             camera.aspect = self.windowWidth() / self.windowHeight();
             camera.updateProjectionMatrix();
-            this.renderers.forEach((renderer) => {
-                renderer.setSize(self.windowWidth(), self.windowHeight());
-            });
+            camera.aspect = self.windowWidth() / self.windowHeight();
+            camera.updateProjectionMatrix();
+            renderer.setSize(self.windowWidth(), self.windowHeight());
+
         };
         window.addEventListener("resize", onWindowResize, false);
         this.debugControls = new OrbitControls(camera, renderer.domElement);
@@ -179,12 +167,7 @@ export class SceneController {
     commandWithName(name) {
         return this.commands[name];
     }
-    addText(name, object, userInteractionsEnabled = false) {
-        const field = gui.add(object, name);
-        if (userInteractionsEnabled == false) {
-            field.domElement.style.pointerEvents = "none";
-        }
-    }
+
     addLight() {
         if (this.shadowsEnabled == false) {
             debugPrint("Can't add light, because shadows are disabled");
@@ -197,9 +180,7 @@ export class SceneController {
         }
         this.scene.add(light);
     }
-    addValueFloat(name, object, minimal, maximal, onChange) {
-        gui.add(object, name, minimal, maximal).onChange(onChange);
-    }
+
     saveGameSettings() {
         this.gameSettings.save();
     }
@@ -221,40 +202,7 @@ export class SceneController {
             controls?.step(delta);
         });
     }
-    addCssPlaneObject(args) {
-        const cssObject = new CSS3DObject(args.div);
-        cssObject.position.x = args.position.x;
-        cssObject.position.y = args.position.y;
-        cssObject.position.z = args.position.z;
-        cssObject.scale.x = args.scale.x;
-        cssObject.scale.y = args.scale.y;
-        cssObject.scale.z = args.scale.z;
-        const root = new GameCssObject3D();
-        root.isTop = args.display.isTop;
-        root.stickToCamera = args.display.stickToCamera;
-        root.originalPosition = args.position;
-        root.originalRotation = args.rotation;
-        root.add(cssObject);
-        root.rotation.x = args.rotation.x;
-        root.rotation.y = args.rotation.y;
-        root.rotation.z = args.rotation.z;
-        const material = new THREE.MeshStandardMaterial({
-            opacity: 0.25,
-            color: new THREE.Color(0x000000),
-            blending: THREE.NoBlending
-        });
-        const geometry = new THREE.PlaneGeometry(args.planeSize.width, args.planeSize.height);
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.receiveShadow = args.shadows.receiveShadow;
-        mesh.castShadow = args.shadows.castShadow;
-        root.add(mesh);
-        if (args.name in this.cssObjects3D) {
-            raiseCriticalError(`Duplicate cssObjects3D name ${args.name}!`);
-            debugger;
-        }
-        this.cssObjects3D[args.name] = root;
-        this.scene.add(root);
-    }
+
     animationsStep(delta) {
         Object.keys(this.animationContainers).forEach((animationContainerName) => {
             const animationContainer = this.animationContainers[animationContainerName];
@@ -276,44 +224,12 @@ export class SceneController {
             }
         });
     }
-    stickCssObjectToCamera(object) {
-        const direction = new THREE.Vector3();
-        this.camera.getWorldDirection(direction);
-        const distance = -object.originalPosition.z / 8;
-        const newPosition = new THREE.Vector3()
-            .copy(this.camera.position)
-            .addScaledVector(this.camera.getWorldDirection(new THREE.Vector3()), distance);
-        object.position.copy(newPosition);
-        object.rotation.copy(this.camera.rotation);
-    }
+
     render() {
-        this.renderers.forEach((renderer) => {
-            if (renderer == this.css3DRendererBottom || renderer == this.css3DRendererTop) {
-                Object.keys(this.cssObjects3D).map(k => {
-                    const object = this.cssObjects3D[k];
-                    this.scene.remove(object);
-                    if (renderer == this.css3DRendererBottom) {
-                        if (!object.isTop) {
-                            this.scene.add(object);
-                            if (object.stickToCamera) {
-                                this.stickCssObjectToCamera(object);
-                            }
-                        }
-                    }
-                    else if (renderer == this.css3DRendererTop) {
-                        if (object.isTop) {
-                            this.scene.add(object);
-                            if (object.stickToCamera) {
-                                this.stickCssObjectToCamera(object);
-                            }
-                        }
-                    }
-                });
-            }
-            renderer.render(this.scene, this.camera);
-        });
+        this.renderer.render(this.scene, this.camera);
         this.debugControls.update();
     }
+
     addSceneObject(sceneObject) {
         const alreadyAddedObject = sceneObject.name in this.objects;
         if (alreadyAddedObject) {
@@ -326,228 +242,7 @@ export class SceneController {
         this.scene.add(sceneObject.threeObject);
         this.objectsPickerController.addSceneObject(sceneObject);
     }
-    alert(args) {
-        const alertName = `alertWindow-${Utils.generateUUID()}`;
-        const alertWindowDiv = document.createElement('div');
-        alertWindowDiv.style.color = "white";
-        alertWindowDiv.style.backgroundColor = 'rgba(128, 128, 128, 0.8)';
-        alertWindowDiv.style.fontSize = "30px";
-        alertWindowDiv.style.padding = "22px";
-        alertWindowDiv.style.textAlign = "center";
-        alertWindowDiv.style.width = "640px";
-        const textSpan = document.createElement('span');
-        textSpan.textContent = args.text;
-        textSpan.style.display = "block";
-        const okButton = document.createElement('button');
-        okButton.textContent = 'OK';
-        okButton.style.color = "white";
-        okButton.style.backgroundColor = 'green';
-        okButton.style.fontSize = "20px";
-        okButton.style.padding = "12px";
-        okButton.style.marginTop = "10px";
-        okButton.style.width = "180px";
-        okButton.style.border = "none";
-        okButton.style.cursor = "pointer";
-        const closeWindow = () => {
-            this.removeCssObjectWithName(alertName);
-        };
-        okButton.addEventListener('click', function () {
-            closeWindow();
-            args.okCallback();
-        });
-        alertWindowDiv.appendChild(textSpan);
-        //alertWindowDiv.appendChild(okButton)
-        this.addCssPlaneObject({
-            name: alertName,
-            div: alertWindowDiv,
-            planeSize: {
-                width: 2,
-                height: 2
-            },
-            position: new GameVector3(0, 0, -8),
-            rotation: GameVector3.zero(),
-            scale: new GameVector3(0.01, 0.01, 0.01),
-            shadows: {
-                receiveShadow: false,
-                castShadow: false
-            },
-            display: {
-                isTop: true,
-                stickToCamera: true
-            }
-        });
-        debugPrint(args.text);
-        debugPrint(args.okCallback);
-        setTimeout(() => {
-            closeWindow();
-            args.okCallback();
-        }, 7000);
-    }
-    removeCssObjectWithName(name) {
-        const object = this.cssObjects3D[name];
-        this.scene.remove(object);
-        var cssObjectsForDeletion = [];
-        object.traverse((child) => {
-            if (child.isCSS3DObject) {
-                cssObjectsForDeletion.push(child);
-            }
-        });
-        cssObjectsForDeletion.forEach((victim) => {
-            object.remove(victim);
-        });
-        delete this.cssObjects3D[name];
-    }
-    confirm(args) {
-        const confirmWindowName = `confirmWindow-${Utils.generateUUID()}`;
-        const closeWindow = () => {
-            this.removeCssObjectWithName(confirmWindowName);
-        };
-        const confirmWindowDiv = document.createElement('div');
-        confirmWindowDiv.style.color = "white";
-        confirmWindowDiv.style.backgroundColor = 'rgba(128, 128, 128, 0.8)';
-        confirmWindowDiv.style.fontSize = "30px";
-        confirmWindowDiv.style.padding = "22px";
-        confirmWindowDiv.style.textAlign = "center";
-        confirmWindowDiv.style.width = "640px";
-        const textSpan = document.createElement('span');
-        textSpan.textContent = args.text;
-        textSpan.style.display = "block";
-        const okButton = document.createElement('button');
-        okButton.textContent = 'OK';
-        okButton.style.color = "white";
-        okButton.style.backgroundColor = 'green';
-        okButton.style.fontSize = "20px";
-        okButton.style.padding = "12px";
-        okButton.style.marginTop = "10px";
-        okButton.style.border = "none";
-        okButton.style.width = "180px";
-        okButton.style.cursor = "pointer";
-        okButton.addEventListener('click', function () {
-            closeWindow();
-            args.okCallback();
-        });
-        const cancelButton = document.createElement('button');
-        cancelButton.textContent = '❌❌❌';
-        cancelButton.style.color = "white";
-        cancelButton.style.backgroundColor = 'white';
-        cancelButton.style.fontSize = "20px";
-        cancelButton.style.padding = "16px";
-        cancelButton.style.marginTop = "10px";
-        cancelButton.style.border = "none";
-        cancelButton.style.width = "180px";
-        cancelButton.style.cursor = "pointer";
-        cancelButton.addEventListener('click', function () {
-            closeWindow();
-            args.cancelCallback();
-        });
-        confirmWindowDiv.appendChild(textSpan);
-        confirmWindowDiv.appendChild(okButton);
-        confirmWindowDiv.appendChild(cancelButton);
-        this.addCssPlaneObject({
-            name: confirmWindowName,
-            div: confirmWindowDiv,
-            planeSize: {
-                width: 2,
-                height: 2
-            },
-            position: new GameVector3(0, 0, -8),
-            rotation: GameVector3.zero(),
-            scale: new GameVector3(0.01, 0.01, 0.01),
-            shadows: {
-                receiveShadow: false,
-                castShadow: false
-            },
-            display: {
-                isTop: true,
-                stickToCamera: true
-            }
-        });
-        debugPrint(args.text);
-        debugPrint(args.okCallback);
-        debugPrint(args.cancelCallback);
-    }
-    prompt(args) {
-        const confirmWindowName = `confirmWindow-${Utils.generateUUID()}`;
-        const closeWindow = () => {
-            this.removeCssObjectWithName(confirmWindowName);
-        };
-        const confirmWindowDiv = document.createElement('div');
-        confirmWindowDiv.style.color = "white";
-        confirmWindowDiv.style.backgroundColor = 'rgba(128, 128, 128, 0.8)';
-        confirmWindowDiv.style.fontSize = "30px";
-        confirmWindowDiv.style.padding = "22px";
-        confirmWindowDiv.style.textAlign = "center";
-        confirmWindowDiv.style.width = "640px";
-        const textSpan = document.createElement('span');
-        textSpan.textContent = args.text;
-        textSpan.style.display = "block";
-        const inputField = document.createElement('input');
-        inputField.type = 'text';
-        inputField.value = args.value;
-        inputField.style.marginTop = "10px";
-        inputField.style.width = "80%";
-        inputField.style.fontSize = "20px";
-        inputField.style.padding = "10px";
-        inputField.onclick = () => { inputField.focus(); };
-        const okButton = document.createElement('button');
-        okButton.textContent = 'OK';
-        okButton.style.color = "white";
-        okButton.style.backgroundColor = 'green';
-        okButton.style.fontSize = "20px";
-        okButton.style.padding = "12px";
-        okButton.style.marginTop = "10px";
-        okButton.style.border = "none";
-        okButton.style.width = "180px";
-        okButton.style.cursor = "pointer";
-        okButton.addEventListener('click', function () {
-            closeWindow();
-            args.okCallback(inputField.value);
-        });
-        const cancelButton = document.createElement('button');
-        cancelButton.textContent = '❌❌❌';
-        cancelButton.style.color = "white";
-        cancelButton.style.backgroundColor = 'white';
-        cancelButton.style.fontSize = "20px";
-        cancelButton.style.padding = "16px";
-        cancelButton.style.marginTop = "10px";
-        cancelButton.style.border = "none";
-        cancelButton.style.width = "180px";
-        cancelButton.style.cursor = "pointer";
-        cancelButton.addEventListener('click', function () {
-            closeWindow();
-            args.cancelCallback();
-        });
-        confirmWindowDiv.appendChild(textSpan);
-        confirmWindowDiv.appendChild(inputField);
-        confirmWindowDiv.appendChild(okButton);
-        confirmWindowDiv.appendChild(cancelButton);
-        this.addCssPlaneObject({
-            name: confirmWindowName,
-            div: confirmWindowDiv,
-            planeSize: {
-                width: 2,
-                height: 2
-            },
-            position: new GameVector3(0, 0, -8),
-            rotation: GameVector3.zero(),
-            scale: new GameVector3(0.01, 0.01, 0.01),
-            shadows: {
-                receiveShadow: false,
-                castShadow: false
-            },
-            display: {
-                isTop: true,
-                stickToCamera: true
-            }
-        });
-        debugPrint(args.text);
-        debugPrint(args.okCallback);
-        debugPrint(args.cancelCallback);
-        // BROWSERS BUG: https://github.com/demensdeum/Masonry-AR/issues/64
-        setTimeout(() => {
-            inputField.focus();
-        }, 500);
-    }
+
     serializedSceneObjects() {
         const keys = Object.keys(this.objects);
         const output = keys.map(key => ({ [key]: this.objects[key].serialize() }));
@@ -559,23 +254,7 @@ export class SceneController {
         output.serialize();
         return output;
     }
-    addButton(name, object) {
-        gui.add(object, name);
-        const boxSize = 1;
-        const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
-        const material = new THREE.MeshStandardMaterial({
-            color: "white",
-            map: this.loadingPlaceholderTexture,
-            transparent: true,
-            opacity: 0
-        });
-        const box = new THREE.Mesh(boxGeometry, material);
-        box.position.x = 0;
-        box.position.y = 0;
-        box.position.z = 0;
-        const buttonSceneObject = new SceneObject(name, "Button", "", "", box, false, null, new Date().getTime());
-        this.objects[name] = buttonSceneObject;
-    }
+
     removeAllSceneObjectsExceptCamera() {
         Object.keys(this.objects).map(k => {
             if (k == Names.Camera) {
@@ -585,16 +264,10 @@ export class SceneController {
         });
         this.scene.background = null;
         this.currentSkyboxName = null;
-        for (const i in gui.__controllers) {
-            gui.remove(gui.__controllers[i]);
-        }
         Object.keys(this.objects).map(k => {
             delete this.commands[k];
         });
-        Object.keys(this.cssObjects3D).map(k => {
-            this.removeCssObjectWithName(k);
-            delete this.commands[k];
-        });
+
         this.scene.background = null;
     }
     removeObjectWithName(name) {
