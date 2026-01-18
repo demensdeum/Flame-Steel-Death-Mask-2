@@ -144,13 +144,16 @@ export class Terminal {
                 this.println("Error: Missing arguments. Usage: teleport <map_id> <x> <y> <private_uuid>");
                 return;
             }
+            this.lastTeleportX = parseInt(parts[2]);
+            this.lastTeleportY = parseInt(parts[3]);
             this.socket.send(JSON.stringify({
                 type: "teleport",
                 map_id: parts[1],
-                x: parseInt(parts[2]),
-                y: parseInt(parts[3]),
+                x: this.lastTeleportX,
+                y: this.lastTeleportY,
                 private_uuid: parts[4]
             }));
+
         } else if (cmd === "entities") {
             if (parts.length < 3) {
                 this.println("Error: Missing arguments. Usage: entities <map_id> <private_uuid>");
@@ -239,7 +242,20 @@ export class Terminal {
             this.println("Camera set to top-down view.");
         } else if (data.type === "register") {
             this.println(`Registration successful! Your public_uuid is: ${data.public_uuid}`);
+        } else if (data.type === "teleport") {
+            this.println(`Teleport successful! Public UUID: ${data.public_uuid}`);
+            if (this.lastTeleportX !== undefined && this.lastTeleportY !== undefined) {
+                const x = this.lastTeleportX;
+                const z = this.lastTeleportY; // y from grid is z in scene
+                const height = 1; // little bit higher
+                this.context.sceneController.camera.position.set(x, height, z);
+                this.context.sceneController.debugControls.target.set(x + 1, height, z); // look "forward"
+                this.context.sceneController.debugControls.update();
+                this.println(`Camera moved to player position: (${x}, ${z})`);
+            }
+
         } else if (data.status === "OK") {
+
 
             this.println("Server status: OK");
         } else if (data.error) {
