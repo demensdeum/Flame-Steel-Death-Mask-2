@@ -29,7 +29,7 @@ async def client():
                 elif cmd == "help":
                     print("\nAvailable commands:")
                     print("  health                     Check server status")
-                    print("  register <private_uuid>    Register a new user or retrieve public_uuid")
+                    print("  register <private_uuid> <type> Register a user with type (seeker, filter, chest)")
                     print("  map <map_id> <private_uuid> Request a procedural map (requires registration)")
                     print("  teleport <map_id> <x> <y> <private_uuid> Teleport to a position (requires registration)")
                     print("  entities <map_id> <private_uuid> List all users on a map (requires registration)")
@@ -39,13 +39,15 @@ async def client():
                 elif cmd == "health":
                     await websocket.send(json.dumps({"type": "health"}))
                 elif cmd == "register":
-                    if len(parts) < 2:
-                        print("Error: Missing private_uuid. Usage: register <private_uuid>")
+                    if len(parts) < 3:
+                        print("Error: Missing arguments. Usage: register <private_uuid> <type>")
                         continue
                     await websocket.send(json.dumps({
                         "type": "register",
-                        "private_uuid": parts[1]
+                        "private_uuid": parts[1],
+                        "entity_type": parts[2]
                     }))
+
                 elif cmd == "map":
                     if len(parts) < 3:
                         print("Error: Missing arguments. Usage: map <map_id> <private_uuid>")
@@ -75,6 +77,7 @@ async def client():
                         "map_id": parts[1],
                         "private_uuid": parts[2]
                     }))
+
                 elif cmd == "attributes":
                     if len(parts) < 2:
                         print("Error: Missing private_uuid. Usage: attributes <private_uuid>")

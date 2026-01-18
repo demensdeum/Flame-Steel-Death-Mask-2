@@ -5,7 +5,7 @@ const { createClient } = require('redis');
 
 
 const mongoUrl = process.env.MONGO_URL || 'mongodb://localhost:27017';
-const dbName = 'gameServer';
+const dbName = 'flame-steel-death-mask-2';
 let db;
 
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -127,21 +127,27 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
 
                     ws.send(JSON.stringify({ type: 'map', data: map }));
                 } else if (message.type === 'register') {
-                    const privateUuid = message.private_uuid;
-                    if (!privateUuid) {
+                    const { private_uuid, entity_type } = message;
+                    if (!private_uuid) {
                         ws.send(JSON.stringify({ error: 'Missing private_uuid' }));
                         return;
                     }
 
+                    const entityTypes = ['seeker', 'filter', 'chest'];
                     const usersCollection = db.collection('users');
-                    let user = await usersCollection.findOne({ private_uuid: privateUuid });
+                    let user = await usersCollection.findOne({ private_uuid: private_uuid });
 
                     if (!user) {
-                        console.log(`New user registration for ${privateUuid}`);
+                        if (!entity_type || !entityTypes.includes(entity_type)) {
+                            ws.send(JSON.stringify({ error: `Registration requires a valid entity_type for new users: ${entityTypes.join(', ')}` }));
+                            return;
+                        }
+                        console.log(`New user registration for ${private_uuid} as ${entity_type}`);
                         const publicUuid = crypto.randomUUID();
                         user = {
-                            private_uuid: privateUuid,
+                            private_uuid: private_uuid,
                             public_uuid: publicUuid,
+                            type: entity_type,
                             attributes: {
                                 bits: 0,
                                 attack: 1,
@@ -152,11 +158,17 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                         };
                         await usersCollection.insertOne(user);
                     } else {
-
-                        console.log(`User ${privateUuid} already registered.`);
+                        console.log(`User ${private_uuid} already registered.`);
+                        if (entity_type && entityTypes.includes(entity_type) && entity_type !== user.type) {
+                            console.log(`Updating user ${private_uuid} entity_type to ${entity_type}`);
+                            await usersCollection.updateOne({ private_uuid: private_uuid }, { $set: { type: entity_type } });
+                            user.type = entity_type;
+                        }
                     }
 
-                    ws.send(JSON.stringify({ type: 'register', public_uuid: user.public_uuid }));
+                    ws.send(JSON.stringify({ type: 'register', public_uuid: user.public_uuid, entity_type: user.type }));
+
+
                 } else if (message.type === 'teleport') {
                     const { map_id, x, y, private_uuid } = message;
 
@@ -179,16 +191,22 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                         public_uuid: user.public_uuid,
                         x,
                         y,
-                        map_id
+                        map_id,
+                        type: user.type
                     };
+
+
 
                     const redisKey = `user:pos:${private_uuid}`;
                     await redisClient.set(redisKey, JSON.stringify(userData), {
                         EX: 600 // 10 minutes
                     });
 
-                    console.log(`User ${private_uuid} teleported to ${map_id} at (${x}, ${y})`);
+                    console.log(`User ${private_uuid} teleported to ${map_id} at (${x}, ${y}) as ${user.type}`);
+
+
                     ws.send(JSON.stringify({ type: 'teleport', status: 'OK', public_uuid: user.public_uuid }));
+
                 } else if (message.type === 'entities') {
                     const { map_id, private_uuid } = message;
                     if (!map_id || !private_uuid) {
@@ -218,8 +236,10 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                                     public_uuid: entity.public_uuid,
                                     x: entity.x,
                                     y: entity.y,
-                                    map_id: entity.map_id
+                                    map_id: entity.map_id,
+                                    type: entity.type
                                 });
+
                             }
                         }
                     }
