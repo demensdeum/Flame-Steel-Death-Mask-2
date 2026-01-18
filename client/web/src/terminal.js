@@ -390,6 +390,31 @@ export class Terminal {
             this.context.sceneController.debugControls.target.set(centerX, 0, centerZ);
             this.context.sceneController.debugControls.update();
             this.println("Camera set to top-down view.");
+
+            // Auto-teleport to food/ground if possible
+            const groundCells = [];
+            for (let y = 0; y < grid.length; y++) {
+                for (let x = 0; x < grid[y].length; x++) {
+                    if (grid[y][x] === '_') {
+                        groundCells.push({ x, y });
+                    }
+                }
+            }
+
+            if (groundCells.length > 0) {
+                const randomCell = groundCells[Math.floor(Math.random() * groundCells.length)];
+                this.println(`Auto-teleporting to random free space: (${randomCell.x}, ${randomCell.y})`);
+
+                // Explicitly update cache variables to ensure consistency
+                const mapId = data.data.id;
+                const privateUuid = this.lastTeleportPrivateUuid;
+
+                this.lastTeleportMapId = mapId;
+                this.lastTeleportX = randomCell.x;
+                this.lastTeleportY = randomCell.y;
+
+                this.sendTeleport(mapId, randomCell.x, randomCell.y, privateUuid);
+            }
         } else if (data.type === "register") {
             this.println(`Registration successful! Your public_uuid is: ${data.public_uuid}`);
             // Auto-start attributes polling if we have a private_uuid
