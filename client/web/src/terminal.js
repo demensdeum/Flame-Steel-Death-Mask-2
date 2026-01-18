@@ -3,7 +3,7 @@ export class Terminal {
         this.context = context;
         this.outputArea = document.getElementById("terminal-output");
         this.inputField = document.getElementById("terminal-input");
-        this.history = [];
+        this.history = JSON.parse(localStorage.getItem("terminal-history") || "[]");
         this.historyIndex = -1;
         this.currentInput = "";
 
@@ -18,9 +18,11 @@ export class Terminal {
                 this.handleCommand(command);
                 if (command.trim() !== "") {
                     this.history.push(command);
+                    localStorage.setItem("terminal-history", JSON.stringify(this.history));
                 }
                 this.historyIndex = -1;
                 this.inputField.value = "";
+
             } else if (event.key === "ArrowUp") {
                 event.preventDefault();
                 if (this.history.length > 0) {
