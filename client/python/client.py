@@ -29,7 +29,7 @@ async def client():
                 elif cmd == "help":
                     print("\nAvailable commands:")
                     print("  health                     Check server status")
-                    print("  register <private_uuid> <type> Register a user with type (seeker, filter, chest)")
+                    print("  register <private_uuid> <type> Register a user with type (seeker, filter, chest, teleport)")
                     print("  map <map_id> <private_uuid> Request a procedural map (requires registration)")
                     print("  teleport <map_id> <x> <y> <private_uuid> Teleport to a position (requires registration)")
                     print("  entities <map_id> <private_uuid> List all users on a map (requires registration)")

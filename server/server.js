@@ -133,7 +133,7 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                         return;
                     }
 
-                    const entityTypes = ['seeker', 'filter', 'chest'];
+                    const entityTypes = ['seeker', 'filter', 'chest', 'teleport'];
                     const usersCollection = db.collection('users');
                     let user = await usersCollection.findOne({ private_uuid: private_uuid });
 
