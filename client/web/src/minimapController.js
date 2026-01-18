@@ -8,10 +8,16 @@ export class MinimapController {
         this.playerColor = "#ff0000";
         this.wallColor = "#00ff00";
         this.groundColor = "#004400";
+        this.entities = [];
     }
 
     setGrid(grid) {
         this.grid = grid;
+        this.update();
+    }
+
+    setEntities(entities) {
+        this.entities = entities;
         this.update();
     }
 
@@ -37,6 +43,7 @@ export class MinimapController {
         }
 
         this.drawGrid(offsetX, offsetY);
+        this.drawEntities(offsetX, offsetY);
         this.drawPlayer(offsetX, offsetY);
     }
 
@@ -60,6 +67,15 @@ export class MinimapController {
                 );
             }
         }
+    }
+
+    drawEntities(offsetX, offsetY) {
+        this.ctx.fillStyle = "#ffff00"; // Other entities are yellow
+        this.entities.forEach(entity => {
+            const ex = offsetX + entity.x * this.tileSize;
+            const ey = offsetY + entity.y * this.tileSize;
+            this.ctx.fillRect(ex, ey, this.tileSize - 1, this.tileSize - 1);
+        });
     }
 
     drawPlayer(offsetX, offsetY) {

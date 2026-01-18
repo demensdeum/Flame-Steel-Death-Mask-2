@@ -9,6 +9,7 @@ import { Terminal } from './terminal.js';
 import { NavigationController } from './navigationController.js';
 import { MinimapController } from './minimapController.js';
 import { UIController } from './uiController.js';
+import { EntitiesController } from './entitiesController.js';
 
 export class Context {
 
@@ -31,6 +32,7 @@ export class Context {
         this.navigationController = new NavigationController(this);
         this.minimapController = new MinimapController(this);
         this.uiController = new UIController(this);
+        this.entitiesController = new EntitiesController(this);
 
 
 

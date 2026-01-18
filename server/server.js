@@ -196,15 +196,28 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                         type: user.type
                     };
 
-
-
                     const redisKey = `user:pos:${private_uuid}`;
+
+                    // --- Handle Map-Based Indexing in Redis ---
+                    const oldDataRaw = await redisClient.get(redisKey);
+                    if (oldDataRaw) {
+                        const oldData = JSON.parse(oldDataRaw);
+                        if (oldData.map_id !== map_id) {
+                            // Remove from old map Set
+                            const oldMapSetKey = `map:entities:${oldData.map_id}`;
+                            await redisClient.sRem(oldMapSetKey, private_uuid);
+                        }
+                    }
+
+                    // Add to current map Set
+                    const currentMapSetKey = `map:entities:${map_id}`;
+                    await redisClient.sAdd(currentMapSetKey, private_uuid);
+
                     await redisClient.set(redisKey, JSON.stringify(userData), {
                         EX: 600 // 10 minutes
                     });
 
                     console.log(`User ${private_uuid} teleported to ${map_id} at (${x}, ${y}) as ${user.type}`);
-
 
                     ws.send(JSON.stringify({ type: 'teleport', status: 'OK', public_uuid: user.public_uuid }));
 
@@ -224,14 +237,18 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                         return;
                     }
 
-                    const keys = await redisClient.keys('user:pos:*');
+                    const mapSetKey = `map:entities:${map_id}`;
+                    const entityPrivateUuids = await redisClient.sMembers(mapSetKey);
 
                     const entities = [];
+                    const expiredUuids = [];
 
-                    for (const key of keys) {
-                        const data = await redisClient.get(key);
+                    for (const entityUuid of entityPrivateUuids) {
+                        const redisKey = `user:pos:${entityUuid}`;
+                        const data = await redisClient.get(redisKey);
                         if (data) {
                             const entity = JSON.parse(data);
+                            // Double check if map matches (in case of stale set data)
                             if (entity.map_id === map_id) {
                                 entities.push({
                                     public_uuid: entity.public_uuid,
@@ -240,9 +257,18 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                                     map_id: entity.map_id,
                                     type: entity.type
                                 });
-
+                            } else {
+                                expiredUuids.push(entityUuid);
                             }
+                        } else {
+                            expiredUuids.push(entityUuid);
                         }
+                    }
+
+                    // Cleanup expired or moved entities from this map's Set
+                    if (expiredUuids.length > 0) {
+                        await redisClient.sRem(mapSetKey, expiredUuids);
+                        console.log(`Cleaned up ${expiredUuids.length} expired entities from map ${map_id}`);
                     }
 
                     ws.send(JSON.stringify({ type: 'entities', map_id, entities }));

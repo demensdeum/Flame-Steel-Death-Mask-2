@@ -11,6 +11,7 @@ export class Terminal {
         this.lastTeleportPrivateUuid = null;
         this.lastTeleportX = undefined;
         this.lastTeleportY = undefined;
+        this.publicUuid = null;
 
         if (!this.outputArea || !this.inputField) {
             console.error("Terminal elements not found!");
@@ -324,6 +325,17 @@ export class Terminal {
         }));
     }
 
+    sendEntitiesRequest(mapId, privateUuid) {
+        if (this.socket.readyState !== WebSocket.OPEN) {
+            return;
+        }
+        this.socket.send(JSON.stringify({
+            type: "entities",
+            map_id: mapId,
+            private_uuid: privateUuid
+        }));
+    }
+
 
     handleServerResponse(data) {
 
@@ -417,6 +429,7 @@ export class Terminal {
             }
         } else if (data.type === "register") {
             this.println(`Registration successful! Your public_uuid is: ${data.public_uuid}`);
+            this.publicUuid = data.public_uuid;
             // Auto-start attributes polling if we have a private_uuid
             if (this._lastRegisterPrivateUuid) {
                 this.println("Starting attributes polling...");
@@ -463,10 +476,28 @@ export class Terminal {
                 this.context.sceneController.debugControls.update();
                 this.context.minimapController.update();
                 this.println(`Camera moved to player position: (${x}, ${z})`);
+
+                if (this.context.entitiesController) {
+                    this.context.entitiesController.startPolling();
+                }
             }
 
 
 
+        } else if (data.type === "entities") {
+            this.println(`\n--- Entities on Map ${data.map_id} ---`);
+            if (data.entities && data.entities.length > 0) {
+                data.entities.forEach(entity => {
+                    this.println(`- [${entity.type.toUpperCase()}] UUID: ${entity.public_uuid} at (${entity.x}, ${entity.y})`);
+                });
+            } else {
+                this.println("No entities found.");
+            }
+            this.println("--- End of Entities ---\n");
+
+            if (this.context.entitiesController) {
+                this.context.entitiesController.reconcile(data.entities);
+            }
         } else if (data.status === "OK") {
 
 
