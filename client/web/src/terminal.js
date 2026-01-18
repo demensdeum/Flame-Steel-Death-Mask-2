@@ -195,12 +195,35 @@ export class Terminal {
                     const char = row[x];
                     const name = `block_${x}_${y}`;
                     if (char === 'X') {
-                        this.context.sceneController.addModelAt(name, modelName, x, 1, y, 0, 0, 0, false, null);
+                        // Only add wall if neighbor is ground
+                        let hasGroundNeighbor = false;
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                if (dx === 0 && dy === 0) continue;
+                                const ny = y + dy;
+                                const nx = x + dx;
+                                if (ny >= 0 && ny < grid.length && nx >= 0 && nx < row.length) {
+                                    if (grid[ny][nx] === '_') {
+                                        hasGroundNeighbor = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (hasGroundNeighbor) break;
+                        }
+
+                        if (hasGroundNeighbor) {
+                            this.context.sceneController.addModelAt(name, modelName, x, 1, y, 0, 0, 0, false, null);
+                        }
                     } else if (char === '_') {
                         this.context.sceneController.addModelAt(name, modelName, x, 0, y, 0, 0, 0, false, null);
+                        const ceilName = `${name}_ceil`;
+                        this.context.sceneController.addModelAt(ceilName, modelName, x, 2, y, 0, 0, 0, false, null);
                     }
+
                 }
             }
+
             this.println("3D Scene Construction Complete.");
 
             // Top-down camera view
