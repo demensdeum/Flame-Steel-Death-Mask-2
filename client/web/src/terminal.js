@@ -110,6 +110,10 @@ export class Terminal {
     }
 
     connect() {
+        if (this.isConnecting || (this.socket && this.socket.readyState === WebSocket.OPEN)) {
+            return;
+        }
+
         if (this.socket) {
             // Clean up old socket to prevent multiple listeners or loops
             this.socket.onclose = null;
@@ -119,6 +123,7 @@ export class Terminal {
             this.socket.close();
         }
 
+        this.isConnecting = true;
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 
         // Get current path and ensure it ends with a slash if not just root
@@ -132,12 +137,13 @@ export class Terminal {
         // Subpath will be like "/flame-steel-death-mask-2/"
         // We append socket to it
         const wsUrl = `${protocol}//${window.location.host}${path}socket`;
+
+        this.println(`--- Connecting to ${wsUrl}... ---`);
         this.socket = new WebSocket(wsUrl);
 
         this.socket.onopen = () => {
-            this.println(`--- Connected to ${wsUrl} ---`);
-
-
+            this.isConnecting = false;
+            this.println(`--- Connected to server ---`);
             this.println("Type 'help' for a list of commands.");
         };
 
@@ -151,12 +157,14 @@ export class Terminal {
         };
 
         this.socket.onclose = () => {
-            this.println("--- Disconnected from server. Reconnecting in 5s... ---");
+            this.isConnecting = false;
+            this.println("--- Connection lost. Reconnecting in 5s... ---");
             setTimeout(() => this.connect(), 5000);
         };
 
         this.socket.onerror = (error) => {
-            this.println("WebSocket Error. Reconnecting in 5s...");
+            this.isConnecting = false;
+            this.println("--- Connection error. Retrying in 5s... ---");
             this.socket.close();
         };
     }
@@ -211,10 +219,18 @@ export class Terminal {
                 return;
             }
             const privateUuid = parts[1];
+            const entityType = parts[2].toLowerCase();
+            const validTypes = ["seeker", "filter", "chest", "teleport"];
+
+            if (!validTypes.includes(entityType)) {
+                this.println(`Error: Invalid entity_type '${entityType}'. Allowed types: ${validTypes.join(", ")}`);
+                return;
+            }
+
             this.socket.send(JSON.stringify({
                 type: "register",
                 private_uuid: privateUuid,
-                entity_type: parts[2]
+                entity_type: entityType
             }));
             // Store for later use in registration response
             this._lastRegisterPrivateUuid = privateUuid;
