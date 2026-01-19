@@ -62,6 +62,22 @@ export class Terminal {
         this.connect();
     }
 
+    registerAndJoin(name) {
+        if (this.socket.readyState !== WebSocket.OPEN) {
+            this.println("Error: Not connected to server.");
+            return;
+        }
+        this.println(`>>> Initializing identity as: ${name}`);
+        this.socket.send(JSON.stringify({
+            type: "register",
+            private_uuid: name,
+            entity_type: "seeker"
+        }));
+        this._lastRegisterPrivateUuid = name;
+        this._lastRegisterEntityType = "seeker";
+        this._joining = true;
+    }
+
     startAttributesPolling(privateUuid) {
         this.privateUuidForAttributes = privateUuid;
 
@@ -482,6 +498,23 @@ export class Terminal {
             if (this._lastRegisterPrivateUuid) {
                 this.println("Starting attributes polling...");
                 this.startAttributesPolling(this._lastRegisterPrivateUuid);
+            }
+
+            if (this._joining) {
+                this.println("Joining world map 1...");
+                this.socket.send(JSON.stringify({
+                    type: "map",
+                    id: "1",
+                    private_uuid: this._lastRegisterPrivateUuid
+                }));
+                this.lastTeleportMapId = "1";
+                this.lastTeleportPrivateUuid = this._lastRegisterPrivateUuid;
+                this._joining = false;
+
+                // Hide registration overlay
+                if (this.context.uiController) {
+                    this.context.uiController.hideRegistrationOverlay();
+                }
             }
         } else if (data.type === "attributes") {
             // Update the attributes display silently (don't print to terminal)
