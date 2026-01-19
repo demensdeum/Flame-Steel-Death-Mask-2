@@ -75,9 +75,96 @@ function generateMap(id) {
 
 
 
+
+async function startFilterSpawner() {
+    const minDelay = 5000;
+    const maxDelay = 60000;
+    const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+
+    setTimeout(async () => {
+        try {
+            // 1. Find all seekers
+            const keys = await redisClient.keys('user:pos:*');
+            const seekers = [];
+
+            for (const key of keys) {
+                const data = await redisClient.get(key);
+                if (data) {
+                    const entity = JSON.parse(data);
+                    if (entity.type === 'seeker') {
+                        seekers.push(entity);
+                    }
+                }
+            }
+
+            if (seekers.length > 0) {
+                // 2. Pick a random seeker
+                const randomSeeker = seekers[Math.floor(Math.random() * seekers.length)];
+
+                // 3. Generate spawn position near seeker
+                // Random offset between -3 and 3 for both x and y, excluding 0,0 if we wanted, but overlapping is fine?
+                // Let's avoid exact overlap just in case, but simple collision isn't strictly prohibited by the prompt.
+                // Prompt says "near".
+                const offsetX = Math.floor(Math.random() * 7) - 3; // -3 to 3
+                const offsetY = Math.floor(Math.random() * 7) - 3; // -3 to 3
+                const spawnX = Math.max(0, Math.min(99, randomSeeker.x + offsetX)); // Clamp to 0-99 map bounds
+                const spawnY = Math.max(0, Math.min(99, randomSeeker.y + offsetY));
+
+                // 4. Create filter entity
+                const usersCollection = db.collection('users');
+                const privateUuid = crypto.randomUUID();
+                const publicUuid = crypto.randomUUID();
+
+                const filterEntity = {
+                    private_uuid: privateUuid,
+                    public_uuid: publicUuid,
+                    type: 'filter',
+                    attributes: {
+                        bits: 0,
+                        attack: 1,
+                        defence: 1,
+                        current_health: 10,
+                        max_health: 10,
+                        heal_items: 0
+                    }
+                };
+
+                await usersCollection.insertOne(filterEntity);
+
+                // 5. Place in Redis
+                const redisKey = `user:pos:${privateUuid}`;
+                const entityData = {
+                    private_uuid: privateUuid,
+                    public_uuid: publicUuid,
+                    x: spawnX,
+                    y: spawnY,
+                    map_id: randomSeeker.map_id,
+                    type: 'filter'
+                };
+
+                // Add to map set
+                const mapSetKey = `map:entities:${randomSeeker.map_id}`;
+                await redisClient.sAdd(mapSetKey, privateUuid);
+
+                await redisClient.set(redisKey, JSON.stringify(entityData), {
+                    EX: 600 // 10 minutes expiry, same as players for now
+                });
+
+                console.log(`Spawned filter ${publicUuid} near seeker ${randomSeeker.public_uuid} at (${spawnX}, ${spawnY}) on map ${randomSeeker.map_id}`);
+            }
+        } catch (err) {
+            console.error('Error in filter spawner:', err);
+        }
+
+        // Schedule next spawn
+        startFilterSpawner();
+    }, delay);
+}
+
 const port = process.env.PORT || 8080;
 
 Promise.all([connectMongo(), connectRedis()]).then(() => {
+    startFilterSpawner();
     const wss = new WebSocketServer({ port });
     console.log(`WebSocket server started on port ${port}`);
 

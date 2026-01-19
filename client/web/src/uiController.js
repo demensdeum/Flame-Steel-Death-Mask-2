@@ -1,7 +1,7 @@
 export class UIController {
     constructor(context) {
         this.context = context;
-        this.terminalVisible = true;
+        this.terminalVisible = false;
         this.init();
     }
 
