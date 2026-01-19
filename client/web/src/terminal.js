@@ -391,6 +391,22 @@ export class Terminal {
         }));
     }
 
+    sendHeal() {
+        if (this.socket.readyState !== WebSocket.OPEN) {
+            this.println("Error: Cannot heal, socket is closed.");
+            return;
+        }
+        if (!this.lastTeleportPrivateUuid) {
+            this.println("Error: No private UUID found. Register first.");
+            return;
+        }
+        this.println(`>>> GUI Heal`);
+        this.socket.send(JSON.stringify({
+            type: "heal",
+            private_uuid: this.lastTeleportPrivateUuid
+        }));
+    }
+
     sendEntitiesRequest(mapId, privateUuid) {
         if (this.socket.readyState !== WebSocket.OPEN) {
             return;

@@ -15,6 +15,7 @@ export class NavigationController {
         document.getElementById("nav-right")?.addEventListener("click", () => this.rotateRight());
         document.getElementById("nav-attack")?.addEventListener("click", () => this.attack());
         document.getElementById("nav-unlock")?.addEventListener("click", () => this.unlock());
+        document.getElementById("nav-heal")?.addEventListener("click", () => this.heal());
     }
 
     rotateLeft() {
@@ -159,5 +160,9 @@ export class NavigationController {
         } else {
             terminal.println("No 'chest' entity in range to unlock.");
         }
+    }
+
+    heal() {
+        this.context.terminal.sendHeal();
     }
 }
