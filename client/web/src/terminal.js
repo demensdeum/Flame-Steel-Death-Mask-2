@@ -355,6 +355,23 @@ export class Terminal {
         }));
     }
 
+    sendUnlock(targetPublicUuid) {
+        if (this.socket.readyState !== WebSocket.OPEN) {
+            this.println("Error: Cannot unlock, socket is closed.");
+            return;
+        }
+        if (!this.lastTeleportPrivateUuid) {
+            this.println("Error: No private UUID found. Register first.");
+            return;
+        }
+        this.println(`>>> GUI Unlock on ${targetPublicUuid}`);
+        this.socket.send(JSON.stringify({
+            type: "unlock",
+            target_public_uuid: targetPublicUuid,
+            unlocker_private_uuid: this.lastTeleportPrivateUuid
+        }));
+    }
+
     sendEntitiesRequest(mapId, privateUuid) {
         if (this.socket.readyState !== WebSocket.OPEN) {
             return;

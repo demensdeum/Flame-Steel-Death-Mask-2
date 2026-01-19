@@ -14,6 +14,7 @@ export class NavigationController {
         document.getElementById("nav-left")?.addEventListener("click", () => this.rotateLeft());
         document.getElementById("nav-right")?.addEventListener("click", () => this.rotateRight());
         document.getElementById("nav-attack")?.addEventListener("click", () => this.attack());
+        document.getElementById("nav-unlock")?.addEventListener("click", () => this.unlock());
     }
 
     rotateLeft() {
@@ -112,6 +113,39 @@ export class NavigationController {
             terminal.sendAttack(target.public_uuid);
         } else {
             terminal.println("No 'filter' entity in range to attack.");
+        }
+    }
+
+    unlock() {
+        const terminal = this.context.terminal;
+        const entitiesController = this.context.entitiesController;
+
+        const playerX = terminal.lastTeleportX;
+        const playerY = terminal.lastTeleportY;
+
+        if (playerX === undefined || playerY === undefined) {
+            terminal.println("Error: Player position unknown. Teleport first.");
+            return;
+        }
+
+        let target = null;
+        for (const entity of entitiesController.entities.values()) {
+            if (entity.type !== "chest") continue;
+
+            const dx = Math.abs(entity.x - playerX);
+            const dy = Math.abs(entity.y - playerY);
+
+            // Proximity check: 1 cell vertically or horizontally (Manhattan distance 1)
+            if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) {
+                target = entity;
+                break;
+            }
+        }
+
+        if (target) {
+            terminal.sendUnlock(target.public_uuid);
+        } else {
+            terminal.println("No 'chest' entity in range to unlock.");
         }
     }
 }
