@@ -12,6 +12,7 @@ export class Terminal {
         this.lastTeleportX = undefined;
         this.lastTeleportY = undefined;
         this.publicUuid = null;
+        this.entityType = null;
 
         if (!this.outputArea || !this.inputField) {
             console.error("Terminal elements not found!");
@@ -235,6 +236,7 @@ export class Terminal {
             }));
             // Store for later use in registration response
             this._lastRegisterPrivateUuid = privateUuid;
+            this._lastRegisterEntityType = entityType;
         } else if (cmd === "map") {
             if (parts.length < 3) {
                 this.println("Error: Missing arguments. Usage: map <map_id> <private_uuid>");
@@ -322,6 +324,23 @@ export class Terminal {
             x: x,
             y: y,
             private_uuid: uuid
+        }));
+    }
+
+    sendAttack(targetPublicUuid) {
+        if (this.socket.readyState !== WebSocket.OPEN) {
+            this.println("Error: Cannot attack, socket is closed.");
+            return;
+        }
+        if (!this.lastTeleportPrivateUuid) {
+            this.println("Error: No private UUID found. Register first.");
+            return;
+        }
+        this.println(`>>> GUI Attack on ${targetPublicUuid}`);
+        this.socket.send(JSON.stringify({
+            type: "attack",
+            target_public_uuid: targetPublicUuid,
+            attacker_private_uuid: this.lastTeleportPrivateUuid
         }));
     }
 
@@ -430,6 +449,7 @@ export class Terminal {
         } else if (data.type === "register") {
             this.println(`Registration successful! Your public_uuid is: ${data.public_uuid}`);
             this.publicUuid = data.public_uuid;
+            this.entityType = this._lastRegisterEntityType;
             // Auto-start attributes polling if we have a private_uuid
             if (this._lastRegisterPrivateUuid) {
                 this.println("Starting attributes polling...");
