@@ -22,7 +22,9 @@ app.use(`${baseUrl}/socket`, wsProxy);
 app.use(baseUrl, express.static(path.join(__dirname, 'src')));
 
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
     console.log(`Web client server running at http://localhost:${port}`);
 });
+
+server.on('upgrade', wsProxy.upgrade);
 

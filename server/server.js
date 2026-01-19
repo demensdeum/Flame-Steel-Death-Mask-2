@@ -76,7 +76,7 @@ function generateMap(id) {
 
 
 
-async function startFilterSpawner() {
+async function startEntitiesSpawner() {
     const minDelay = 5000;
     const maxDelay = 60000;
     const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
@@ -100,71 +100,149 @@ async function startFilterSpawner() {
             if (seekers.length > 0) {
                 // 2. Pick a random seeker
                 const randomSeeker = seekers[Math.floor(Math.random() * seekers.length)];
+                const mapId = randomSeeker.map_id;
 
-                // 3. Generate spawn position near seeker
-                // Random offset between -3 and 3 for both x and y, excluding 0,0 if we wanted, but overlapping is fine?
-                // Let's avoid exact overlap just in case, but simple collision isn't strictly prohibited by the prompt.
-                // Prompt says "near".
-                const offsetX = Math.floor(Math.random() * 7) - 3; // -3 to 3
-                const offsetY = Math.floor(Math.random() * 7) - 3; // -3 to 3
-                const spawnX = Math.max(0, Math.min(99, randomSeeker.x + offsetX)); // Clamp to 0-99 map bounds
-                const spawnY = Math.max(0, Math.min(99, randomSeeker.y + offsetY));
+                // 3. Check entity count limit (max 20) and build occupancy set
+                const mapSetKey = `map:entities:${mapId}`;
+                const entityUuids = await redisClient.sMembers(mapSetKey);
 
-                // 4. Create filter entity
-                const usersCollection = db.collection('users');
-                const privateUuid = crypto.randomUUID();
-                const publicUuid = crypto.randomUUID();
-
-                const filterEntity = {
-                    private_uuid: privateUuid,
-                    public_uuid: publicUuid,
-                    type: 'filter',
-                    attributes: {
-                        bits: 0,
-                        attack: 1,
-                        defence: 1,
-                        current_health: 10,
-                        max_health: 10,
-                        heal_items: 0
+                if (entityUuids.length >= 20) {
+                    console.log(`Map ${mapId} has ${entityUuids.length} entities (limit 20). Skip spawn.`);
+                } else {
+                    const occupied = new Set();
+                    for (const uuid of entityUuids) {
+                        const posKey = `user:pos:${uuid}`;
+                        const posDataRaw = await redisClient.get(posKey);
+                        if (posDataRaw) {
+                            const posData = JSON.parse(posDataRaw);
+                            occupied.add(`${posData.x},${posData.y}`);
+                        }
                     }
-                };
+                    // Also add the seekers current position just in case it's not in the set yet (should be though)
+                    occupied.add(`${randomSeeker.x},${randomSeeker.y}`);
 
-                await usersCollection.insertOne(filterEntity);
+                    // 4. Find valid spawn position (shuffle method)
+                    const mapsCollection = db.collection('maps');
+                    const map = await mapsCollection.findOne({ id: mapId });
 
-                // 5. Place in Redis
-                const redisKey = `user:pos:${privateUuid}`;
-                const entityData = {
-                    private_uuid: privateUuid,
-                    public_uuid: publicUuid,
-                    x: spawnX,
-                    y: spawnY,
-                    map_id: randomSeeker.map_id,
-                    type: 'filter'
-                };
+                    if (map) {
+                        const validSpots = [];
+                        const range = 3;
+                        const minX = Math.max(0, randomSeeker.x - range);
+                        const maxX = Math.min(99, randomSeeker.x + range);
+                        const minY = Math.max(0, randomSeeker.y - range);
+                        const maxY = Math.min(99, randomSeeker.y + range);
 
-                // Add to map set
-                const mapSetKey = `map:entities:${randomSeeker.map_id}`;
-                await redisClient.sAdd(mapSetKey, privateUuid);
+                        // Calculate grid width from map data (assuming 100 based on generateMap)
+                        // The grid is stored as an array of strings in the DB
+                        const grid = map.grid; // Array of strings
 
-                await redisClient.set(redisKey, JSON.stringify(entityData), {
-                    EX: 600 // 10 minutes expiry, same as players for now
-                });
+                        for (let y = minY; y <= maxY; y++) {
+                            for (let x = minX; x <= maxX; x++) {
+                                // Check map bounds (implicit by loop limits, but good to be safe)
+                                if (y < 0 || y >= grid.length || x < 0 || x >= grid[0].length) continue;
 
-                console.log(`Spawned filter ${publicUuid} near seeker ${randomSeeker.public_uuid} at (${spawnX}, ${spawnY}) on map ${randomSeeker.map_id}`);
+                                const cell = grid[y][x];
+                                if (cell === '_' && !occupied.has(`${x},${y}`)) {
+                                    validSpots.push({ x, y });
+                                }
+                            }
+                        }
+
+                        if (validSpots.length > 0) {
+                            // Shuffle validSpots (Fisher-Yates)
+                            for (let i = validSpots.length - 1; i > 0; i--) {
+                                const j = Math.floor(Math.random() * (i + 1));
+                                [validSpots[i], validSpots[j]] = [validSpots[j], validSpots[i]];
+                            }
+
+                            const spawnPos = validSpots[0];
+                            const spawnX = spawnPos.x;
+                            const spawnY = spawnPos.y;
+
+                            // 5. Determine Entity Type (20% Chest, 80% Filter)
+                            const isChest = Math.random() < 0.2;
+                            const entityType = isChest ? 'chest' : 'filter';
+
+                            const usersCollection = db.collection('users');
+                            const privateUuid = crypto.randomUUID();
+                            const publicUuid = crypto.randomUUID();
+
+                            let newEntity;
+
+                            if (isChest) {
+                                // Random loot
+                                const lootBits = Math.floor(Math.random() * 10) + 1;
+                                newEntity = {
+                                    private_uuid: privateUuid,
+                                    public_uuid: publicUuid,
+                                    type: 'chest',
+                                    attributes: {
+                                        bits: lootBits,
+                                        attack: 0,
+                                        defence: 0,
+                                        current_health: 0,
+                                        max_health: 0,
+                                        heal_items: Math.random() < 0.5 ? 1 : 0
+                                    }
+                                };
+                            } else {
+                                // Filter entity
+                                newEntity = {
+                                    private_uuid: privateUuid,
+                                    public_uuid: publicUuid,
+                                    type: 'filter',
+                                    attributes: {
+                                        bits: 0,
+                                        attack: 1,
+                                        defence: 1,
+                                        current_health: 10,
+                                        max_health: 10,
+                                        heal_items: 0
+                                    }
+                                };
+                            }
+
+                            await usersCollection.insertOne(newEntity);
+
+                            // 6. Place in Redis
+                            const redisKey = `user:pos:${privateUuid}`;
+                            const entityData = {
+                                private_uuid: privateUuid,
+                                public_uuid: publicUuid,
+                                x: spawnX,
+                                y: spawnY,
+                                map_id: mapId,
+                                type: entityType
+                            };
+
+                            await redisClient.sAdd(mapSetKey, privateUuid);
+                            await redisClient.set(redisKey, JSON.stringify(entityData), {
+                                EX: 600 // 10 minutes expiry
+                            });
+
+                            console.log(`Spawned ${entityType} ${publicUuid} near seeker ${randomSeeker.public_uuid} at (${spawnX}, ${spawnY}) on map ${mapId}`);
+                        } else {
+                            console.log(`No valid spawn spots near seeker ${randomSeeker.public_uuid} on map ${mapId}`);
+                        }
+                    } else {
+                        console.log(`Map ${mapId} not found in DB`);
+                    }
+                }
             }
         } catch (err) {
-            console.error('Error in filter spawner:', err);
+            console.error('Error in entities spawner:', err);
         }
 
         // Schedule next spawn
-        startFilterSpawner();
+        startEntitiesSpawner();
     }, delay);
 }
 
 const port = process.env.PORT || 8080;
 
 Promise.all([connectMongo(), connectRedis()]).then(() => {
-    startFilterSpawner();
+    startEntitiesSpawner();
     const wss = new WebSocketServer({ port });
     console.log(`WebSocket server started on port ${port}`);
 
