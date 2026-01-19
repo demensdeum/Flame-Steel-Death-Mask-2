@@ -70,6 +70,18 @@ export class NavigationController {
         const nextX = (terminal.lastTeleportX || 0) + dx;
         const nextY = (terminal.lastTeleportY || 0) + dy;
 
+        const minimapController = this.context.minimapController;
+        if (minimapController && minimapController.grid) {
+            const row = minimapController.grid[nextY];
+            if (row) {
+                const char = row[nextX];
+                if (char === 'X') {
+                    terminal.println("Cannot move: path is blocked by a wall.");
+                    return;
+                }
+            }
+        }
+
         terminal.sendTeleport(
             terminal.lastTeleportMapId,
             nextX,
