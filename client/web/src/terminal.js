@@ -63,8 +63,11 @@ export class Terminal {
     }
 
     registerAndJoin(name) {
+        console.log("Terminal: registerAndJoin called with:", name);
+        console.log("Terminal: socket state:", this.socket ? this.socket.readyState : "no socket");
         if (this.socket.readyState !== WebSocket.OPEN) {
             this.println("Error: Not connected to server.");
+            console.error("Terminal: Cannot register, socket not open.");
             return;
         }
         this.println(`>>> Initializing identity as: ${name}`);

@@ -6,6 +6,7 @@ export class UIController {
     }
 
     init() {
+        console.log("UIController: initializing...");
         const toggleButton = document.getElementById("terminal-toggle");
         if (toggleButton) {
             toggleButton.addEventListener("click", () => this.toggleTerminal());
@@ -13,9 +14,11 @@ export class UIController {
 
         const joinButton = document.getElementById("registration-join");
         const nameInput = document.getElementById("registration-name");
+        console.log("UIController: joinButton:", joinButton, "nameInput:", nameInput);
         if (joinButton && nameInput) {
             joinButton.addEventListener("click", () => {
                 const name = nameInput.value.trim();
+                console.log("UIController: Join clicked, name:", name);
                 if (name) {
                     this.context.terminal.registerAndJoin(name);
                 } else {
