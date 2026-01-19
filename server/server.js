@@ -446,6 +446,114 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                         target_remaining_health: newHealth,
                         entity_removed: entityRemoved
                     }));
+                } else if (message.type === 'unlock') {
+                    const { target_public_uuid, unlocker_private_uuid } = message;
+
+                    if (!target_public_uuid || !unlocker_private_uuid) {
+                        ws.send(JSON.stringify({ error: 'Missing target_public_uuid or unlocker_private_uuid' }));
+                        return;
+                    }
+
+                    // 1. Authenticate player
+                    const usersCollection = db.collection('users');
+                    const player = await usersCollection.findOne({ private_uuid: unlocker_private_uuid });
+
+                    if (!player) {
+                        ws.send(JSON.stringify({ error: 'Unauthorized: invalid unlocker_private_uuid' }));
+                        return;
+                    }
+
+                    // 2. Get player position from Redis
+                    const playerRedisKey = `user:pos:${unlocker_private_uuid}`;
+                    const playerPosData = await redisClient.get(playerRedisKey);
+
+                    if (!playerPosData) {
+                        ws.send(JSON.stringify({ error: 'Player position not found. Must teleport first.' }));
+                        return;
+                    }
+
+                    const playerPos = JSON.parse(playerPosData);
+
+                    // 3. Find target chest in Redis
+                    const keys = await redisClient.keys('user:pos:*');
+                    let chestPos = null;
+                    let chestPrivateUuid = null;
+
+                    for (const key of keys) {
+                        const data = await redisClient.get(key);
+                        if (data) {
+                            const entity = JSON.parse(data);
+                            if (entity.public_uuid === target_public_uuid) {
+                                chestPos = entity;
+                                chestPrivateUuid = entity.private_uuid;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!chestPos) {
+                        ws.send(JSON.stringify({ error: 'Chest not found or not on any map' }));
+                        return;
+                    }
+
+                    // 4. Validate same map and distance
+                    if (playerPos.map_id !== chestPos.map_id) {
+                        ws.send(JSON.stringify({ error: 'Chest is on a different map' }));
+                        return;
+                    }
+
+                    const distance = Math.abs(playerPos.x - chestPos.x) + Math.abs(playerPos.y - chestPos.y);
+                    if (distance !== 1) {
+                        ws.send(JSON.stringify({ error: 'Chest must be exactly 1 cell away' }));
+                        return;
+                    }
+
+                    // 5. Get chest entity from MongoDB
+                    const chest = await usersCollection.findOne({ private_uuid: chestPrivateUuid });
+                    if (!chest || chest.type !== 'chest') {
+                        ws.send(JSON.stringify({ error: 'Target is not a valid chest' }));
+                        return;
+                    }
+
+                    // 6. Cost check
+                    const chestBits = chest.attributes.bits || 0;
+                    if (chestBits < 0) {
+                        const price = Math.abs(chestBits);
+                        if (player.attributes.bits < price) {
+                            ws.send(JSON.stringify({ type: 'unlock', status: 'FAILED', error: `Not enough bits. Need ${price}, have ${player.attributes.bits}` }));
+                            return;
+                        }
+                    }
+
+                    // 7. Transfer loot and update player attributes
+                    const loot = chest.attributes;
+                    const updateData = {
+                        'attributes.bits': player.attributes.bits + (loot.bits || 0),
+                        'attributes.attack': player.attributes.attack + (loot.attack || 0),
+                        'attributes.defence': player.attributes.defence + (loot.defence || 0),
+                        'attributes.max_health': player.attributes.max_health + (loot.max_health || 0),
+                        'attributes.heal_items': player.attributes.heal_items + (loot.heal_items || 0)
+                    };
+
+                    // Health transfer
+                    const healthGain = loot.current_health || 0;
+                    const newMaxHealth = updateData['attributes.max_health'];
+                    updateData['attributes.current_health'] = Math.min(newMaxHealth, player.attributes.current_health + healthGain);
+
+                    await usersCollection.updateOne({ private_uuid: unlocker_private_uuid }, { $set: updateData });
+
+                    // 8. Remove chest from DB and Redis
+                    await usersCollection.deleteOne({ private_uuid: chestPrivateUuid });
+                    const targetRedisKey = `user:pos:${chestPrivateUuid}`;
+                    await redisClient.del(targetRedisKey);
+
+                    console.log(`Unlock: ${player.public_uuid} unlocked chest ${chest.public_uuid}. Loot: ${JSON.stringify(loot)}`);
+
+                    ws.send(JSON.stringify({
+                        type: 'unlock',
+                        status: 'OK',
+                        loot: loot
+                    }));
                 }
 
 

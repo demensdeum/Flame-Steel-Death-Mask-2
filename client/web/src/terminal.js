@@ -192,6 +192,7 @@ export class Terminal {
             this.println("  attributes <private_uuid>  Get player attributes (requires registration)");
             this.println("  heal <private_uuid>        Heal yourself (requires registration)");
             this.println("  attack <target_public_uuid> <attacker_private_uuid> Attack another entity (requires registration)");
+            this.println("  unlock <target_public_uuid> <unlocker_private_uuid> Unlock a chest (requires registration)");
             this.println("  clear                     Clear the terminal");
             this.println("  exit / quit               Close the client\n");
             return;
@@ -304,6 +305,16 @@ export class Terminal {
                 type: "attack",
                 target_public_uuid: parts[1],
                 attacker_private_uuid: parts[2]
+            }));
+        } else if (cmd === "unlock") {
+            if (parts.length < 3) {
+                this.println("Error: Missing arguments. Usage: unlock <target_public_uuid> <unlocker_private_uuid>");
+                return;
+            }
+            this.socket.send(JSON.stringify({
+                type: "unlock",
+                target_public_uuid: parts[1],
+                unlocker_private_uuid: parts[2]
             }));
         } else {
             this.println(`Unknown command: '${cmd}'. Type 'help' for available commands.`);
@@ -477,6 +488,20 @@ export class Terminal {
                 }
             } else {
                 this.println(`Attack failed.`);
+            }
+        } else if (data.type === "unlock") {
+            if (data.status === "OK") {
+                this.println(`Unlock successful!`);
+                if (data.loot) {
+                    this.println(`Loot received:`);
+                    if (data.loot.bits) this.println(`- Bits: ${data.loot.bits}`);
+                    if (data.loot.attack) this.println(`- Attack: ${data.loot.attack}`);
+                    if (data.loot.defence) this.println(`- Defence: ${data.loot.defence}`);
+                    if (data.loot.max_health) this.println(`- Max Health: ${data.loot.max_health}`);
+                    if (data.loot.heal_items) this.println(`- Heal Items: ${data.loot.heal_items}`);
+                }
+            } else {
+                this.println(`Unlock failed: ${data.error || "Unknown error"}`);
             }
         } else if (data.type === "teleport") {
             this.println(`Teleport successful! Public UUID: ${data.public_uuid}`);
