@@ -188,12 +188,13 @@ async function startEntitiesSpawner() {
                                 };
                             } else {
                                 // Filter entity
+                                const filterBits = Math.floor(Math.random() * (1000 - 10 + 1)) + 10;
                                 newEntity = {
                                     private_uuid: privateUuid,
                                     public_uuid: publicUuid,
                                     type: 'filter',
                                     attributes: {
-                                        bits: 0,
+                                        bits: filterBits,
                                         attack: 1,
                                         defence: 1,
                                         current_health: 10,
@@ -590,7 +591,17 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
 
                     // 9. Check if target is dead (filter type only)
                     let entityRemoved = false;
+                    let bitsGained = 0;
                     if (newHealth <= 0 && target.type === 'filter') {
+                        // Transfer bits
+                        bitsGained = target.attributes.bits || 0;
+                        const newAttackerBits = (attacker.attributes.bits || 0) + bitsGained;
+
+                        await usersCollection.updateOne(
+                            { private_uuid: attacker_private_uuid },
+                            { $set: { 'attributes.bits': newAttackerBits } }
+                        );
+
                         // Remove from MongoDB
                         await usersCollection.deleteOne({ private_uuid: targetPrivateUuid });
 
@@ -599,7 +610,7 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                         await redisClient.del(targetRedisKey);
 
                         entityRemoved = true;
-                        console.log(`Filter entity ${target.public_uuid} removed (health <= 0)`);
+                        console.log(`Filter entity ${target.public_uuid} removed (health <= 0). Attacker ${attacker.public_uuid} gained ${bitsGained} bits.`);
                     }
 
                     // 10. Send response
