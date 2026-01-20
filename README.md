@@ -4,7 +4,7 @@ A multiplayer 3D dungeon crawler web game with a retro-cyberpunk aesthetic, feat
 
 ## 🎮 Features
 
-- **3D Exploration**: First-person perspective dungeon crawling using Three.js.
+- **3D Exploration**: First-person perspective dungeon crawling using Flame Steel Engine 2 + Three.js.
 - **Multiplayer**: Real-time visibility of other players and entities.
 - **Terminal Interface**: integrated command-line for advanced game actions, debugging, and chatting.
 - **Procedural Generation**: Randomly generated dungeon maps with rooms and corridors.
