@@ -434,7 +434,7 @@ export class Terminal {
             this.context.sceneController.removeAllSceneObjectsExceptCamera();
 
 
-            const modelName = "com.demensdeum.flamesteeldeathmask2.wall";
+            const modelName = "com.demensdeum.flame-steel-death-mask-2.grid";
 
             for (let y = 0; y < grid.length; y++) {
                 const row = grid[y];
