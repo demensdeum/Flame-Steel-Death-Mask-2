@@ -81,6 +81,7 @@ export class SceneController {
         window.addEventListener("resize", onWindowResize, false);
         this.debugControls = new OrbitControls(camera, renderer.domElement);
         debugPrint(this.debugControls);
+        this.instancedMeshes = {};
     }
     lockOrbitControls() {
         this.debugControls.maxPolarAngle = Math.PI / 2 - Utils.degreesToRadians(50);
@@ -144,9 +145,6 @@ export class SceneController {
     controlsCanMoveBackwardObject(_, __) {
         return this.canMoveBackward;
     }
-    weatherControllerDidRequireToAddInstancedMeshToScene(_, instancedMesh) {
-        this.scene.add(instancedMesh);
-    }
     addCommand(name, type, time, x, y, z, rX, rY, rZ, nextCommandName) {
         const position = new THREE.Vector3(x, y, z);
         const rotation = new THREE.Vector3(rX, rY, rZ);
@@ -191,7 +189,6 @@ export class SceneController {
         }
         const delta = this.clock.getDelta();
         this.controlsStep(delta);
-        this.weatherController?.step(delta);
         this.animationsStep(delta);
         this.render();
     }
@@ -537,6 +534,52 @@ export class SceneController {
         sceneObject.threeObject.rotation.y = y;
         sceneObject.threeObject.rotation.z = z;
         sceneObject.changeDate = Utils.timestamp();
+    }
+    addInstancedModel(modelName, positions) {
+        if (modelName in this.instancedMeshes) {
+            return;
+        }
+
+        const count = positions.length;
+        const modelLoader = new GLTFLoader();
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath('build/three/examples/jsm/libs/draco/');
+        modelLoader.setDRACOLoader(dracoLoader);
+
+        const modelPath = Paths.modelPath(modelName);
+        const self = this;
+
+        modelLoader.load(modelPath, (container) => {
+            const model = container.scene;
+            let mesh = null;
+
+            model.traverse((child) => {
+                if (child.isMesh && !mesh) {
+                    mesh = child;
+                }
+            });
+
+            if (mesh) {
+                const instancedMesh = new THREE.InstancedMesh(mesh.geometry, mesh.material, count);
+                instancedMesh.castShadow = self.shadowsEnabled;
+                instancedMesh.receiveShadow = self.shadowsEnabled;
+
+                const dummy = new THREE.Object3D();
+                for (let i = 0; i < count; i++) {
+                    const position = positions[i];
+                    dummy.position.set(position.x, position.y, position.z);
+                    dummy.updateMatrix();
+                    instancedMesh.setMatrixAt(i, dummy.matrix);
+                }
+                instancedMesh.instanceMatrix.needsUpdate = true;
+
+                self.instancedMeshes[modelName] = instancedMesh;
+                self.scene.add(instancedMesh);
+                debugPrint(`Added instanced model: ${modelName} with count: ${count}`);
+            } else {
+                debugPrint(`Failed to add instanced model: ${modelName} - no mesh found`);
+            }
+        });
     }
 }
 SceneController.itemSize = 1;
