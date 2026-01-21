@@ -435,12 +435,12 @@ export class Terminal {
 
 
             const modelName = "com.demensdeum.flame-steel-death-mask-2.grid";
+            const environmentPositions = [];
 
             for (let y = 0; y < grid.length; y++) {
                 const row = grid[y];
                 for (let x = 0; x < row.length; x++) {
                     const char = row[x];
-                    const name = `block_${x}_${y}`;
                     if (char === 'X') {
                         // Only add wall if neighbor is ground
                         let hasGroundNeighbor = false;
@@ -460,16 +460,15 @@ export class Terminal {
                         }
 
                         if (hasGroundNeighbor) {
-                            this.context.sceneController.addModelAt(name, modelName, x, 1, y, 0, 0, 0, false, null);
+                            environmentPositions.push({ x, y: 1, z: y });
                         }
                     } else if (char === '_') {
-                        this.context.sceneController.addModelAt(name, modelName, x, 0, y, 0, 0, 0, false, null);
-                        const ceilName = `${name}_ceil`;
-                        this.context.sceneController.addModelAt(ceilName, modelName, x, 2, y, 0, 0, 0, false, null);
+                        environmentPositions.push({ x, y: 0, z: y });
+                        environmentPositions.push({ x, y: 2, z: y });
                     }
-
                 }
             }
+            this.context.sceneController.addInstancedModel(modelName, environmentPositions);
 
             this.println("3D Scene Construction Complete.");
 

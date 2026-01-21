@@ -260,12 +260,12 @@ export class SceneController {
             this.removeObjectWithName(k);
         });
         this.scene.background = null;
-        this.currentSkyboxName = null;
-        Object.keys(this.objects).map(k => {
-            delete this.commands[k];
+        Object.keys(this.instancedMeshes).forEach((modelName) => {
+            const instancedMesh = this.instancedMeshes[modelName];
+            this.scene.remove(instancedMesh);
+            instancedMesh.dispose();
         });
-
-        this.scene.background = null;
+        this.instancedMeshes = {};
     }
     removeObjectWithName(name) {
         const sceneObject = this.objects[name];
@@ -543,7 +543,7 @@ export class SceneController {
         const count = positions.length;
         const modelLoader = new GLTFLoader();
         const dracoLoader = new DRACOLoader();
-        dracoLoader.setDecoderPath('build/three/examples/jsm/libs/draco/');
+        dracoLoader.setDecoderPath('./three/examples/jsm/libs/draco/');
         modelLoader.setDRACOLoader(dracoLoader);
 
         const modelPath = Paths.modelPath(modelName);
@@ -572,6 +572,7 @@ export class SceneController {
                     instancedMesh.setMatrixAt(i, dummy.matrix);
                 }
                 instancedMesh.instanceMatrix.needsUpdate = true;
+                instancedMesh.computeBoundingSphere();
 
                 self.instancedMeshes[modelName] = instancedMesh;
                 self.scene.add(instancedMesh);
@@ -579,6 +580,8 @@ export class SceneController {
             } else {
                 debugPrint(`Failed to add instanced model: ${modelName} - no mesh found`);
             }
+        }, undefined, (error) => {
+            debugPrint(`Error loading instanced model ${modelName}: ${error}`);
         });
     }
 }
