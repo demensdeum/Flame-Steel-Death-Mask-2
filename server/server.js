@@ -326,6 +326,12 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                         return;
                     }
 
+                    const mapIdInt = parseInt(mapId);
+                    if (isNaN(mapIdInt) || mapIdInt < 1 || mapIdInt > 1000000) {
+                        ws.send(JSON.stringify({ error: 'Invalid map id. Must be between 1 and 1000000' }));
+                        return;
+                    }
+
                     const usersCollection = db.collection('users');
                     const user = await usersCollection.findOne({ private_uuid: privateUuid });
 
