@@ -592,6 +592,15 @@ export class Terminal {
 
                 if (this.context.entitiesController) {
                     this.context.entitiesController.startPolling();
+                    // Check if player is on a teleport entity
+                    for (const entity of this.context.entitiesController.entities.values()) {
+                        if (entity.type === 'teleport' && entity.x === x && entity.y === z) {
+                            const nextMapId = parseInt(this.lastTeleportMapId) + 1;
+                            this.println(`Character is on top of teleport: transitioning to map ${nextMapId}`);
+                            this.handleCommand(`map ${nextMapId} ${this.lastTeleportPrivateUuid}`);
+                            break;
+                        }
+                    }
                 }
             }
 

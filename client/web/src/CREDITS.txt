@@ -18,3 +18,9 @@ Cat with jet pack
 Avatar of muru
 Muru
 https://sketchfab.com/3d-models/cat-with-jet-pack-9afc8fd58c0d4f7d827f2007d6ac1e80
+
+com.demensdeum.flame-steel-death-mask-2.teleport.model.glb
+3D Model
+Avatar of Polygons_Oh_My
+Kain Hunter
+https://sketchfab.com/3d-models/sm-teleporter-0a5548319d6e4b88878b0aa7d2322319
