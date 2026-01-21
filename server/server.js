@@ -74,6 +74,56 @@ function generateMap(id) {
 }
 
 
+async function spawnTeleportIfNeeded(mapId, grid, occupied) {
+    const mapSetKey = `map:entities:${mapId}`;
+    const entityUuids = await redisClient.sMembers(mapSetKey);
+    let hasTeleport = false;
+    for (const uuid of entityUuids) {
+        const posKey = `user:pos:${uuid}`;
+        const posDataRaw = await redisClient.get(posKey);
+        if (posDataRaw) {
+            const posData = JSON.parse(posDataRaw);
+            if (posData.type === 'teleport') {
+                hasTeleport = true;
+                break;
+            }
+        }
+    }
+
+    if (!hasTeleport) {
+        const freeSpots = [];
+        for (let y = 0; y < grid.length; y++) {
+            for (let x = 0; x < grid[y].length; x++) {
+                if (grid[y][x] === '_' && !occupied.has(`${x},${y}`)) {
+                    freeSpots.push({ x, y });
+                }
+            }
+        }
+
+        if (freeSpots.length > 0) {
+            const spot = freeSpots[Math.floor(Math.random() * freeSpots.length)];
+            const newPrivateUuid = crypto.randomUUID();
+            const newPublicUuid = crypto.randomUUID();
+            const teleportData = {
+                private_uuid: newPrivateUuid,
+                public_uuid: newPublicUuid,
+                x: spot.x,
+                y: spot.y,
+                map_id: mapId,
+                type: 'teleport'
+            };
+            await redisClient.sAdd(mapSetKey, newPrivateUuid);
+            await redisClient.set(`user:pos:${newPrivateUuid}`, JSON.stringify(teleportData), {
+                EX: 600 // 10 minutes
+            });
+            console.log(`Spawned teleport ${newPublicUuid} at (${spot.x}, ${spot.y}) on map ${mapId} (Redis-only)`);
+            return spot;
+        }
+    }
+    return null;
+}
+
+
 
 
 async function startEntitiesSpawner() {
@@ -126,6 +176,12 @@ async function startEntitiesSpawner() {
                     const map = await mapsCollection.findOne({ id: mapId });
 
                     if (map) {
+                        // Check and spawn teleport if needed
+                        const teleportSpot = await spawnTeleportIfNeeded(mapId, map.grid, occupied);
+                        if (teleportSpot) {
+                            occupied.add(`${teleportSpot.x},${teleportSpot.y}`);
+                        }
+
                         const validSpots = [];
                         const range = 3;
                         const minX = Math.max(0, randomSeeker.x - range);
@@ -290,6 +346,20 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                     } else {
                         console.log(`Map ${mapId} found in database.`);
                     }
+
+                    // Check and spawn teleport if needed
+                    const mapSetKey = `map:entities:${mapId}`;
+                    const entityUuids = await redisClient.sMembers(mapSetKey);
+                    const occupied = new Set();
+                    for (const uuid of entityUuids) {
+                        const posKey = `user:pos:${uuid}`;
+                        const posDataRaw = await redisClient.get(posKey);
+                        if (posDataRaw) {
+                            const posData = JSON.parse(posDataRaw);
+                            occupied.add(`${posData.x},${posData.y}`);
+                        }
+                    }
+                    await spawnTeleportIfNeeded(mapId, map.grid, occupied);
 
                     ws.send(JSON.stringify({ type: 'map', data: map }));
                 } else if (message.type === 'register') {
