@@ -1,5 +1,8 @@
 # Flame Steel: Death Mask 2
 
+Play:
+https://mediumdemens.vps.webdock.cloud/flame-steel-death-mask-2/
+
 A multiplayer 3D dungeon crawler web game with a retro-cyberpunk aesthetic, featuring procedural maps, terminal-based interactions, and real-time multiplayer gameplay.
 
 ## 🎮 Features
