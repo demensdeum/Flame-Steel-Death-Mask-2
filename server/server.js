@@ -226,35 +226,39 @@ async function startEntitiesSpawner() {
 
                             let newEntity;
 
+                            const mapIndex = parseInt(mapId);
+                            const attack = Math.floor(Math.random() * (mapIndex + 1));
+                            const defence = Math.floor(Math.random() * (mapIndex + 1));
+                            const maxHealth = Math.max(1, Math.floor(Math.random() * (mapIndex + 1)));
+                            const bits = Math.floor(Math.random() * (mapIndex * 2)) + 1;
+
                             if (isChest) {
                                 // Random loot
-                                const lootBits = Math.floor(Math.random() * 10) + 1;
                                 newEntity = {
                                     private_uuid: privateUuid,
                                     public_uuid: publicUuid,
                                     type: 'chest',
                                     attributes: {
-                                        bits: lootBits,
-                                        attack: 0,
-                                        defence: 0,
-                                        current_health: 0,
-                                        max_health: 0,
+                                        bits: bits,
+                                        attack: attack,
+                                        defence: defence,
+                                        current_health: maxHealth,
+                                        max_health: maxHealth,
                                         heal_items: Math.random() < 0.5 ? 1 : 0
                                     }
                                 };
                             } else {
                                 // Filter entity
-                                const filterBits = Math.floor(Math.random() * (1000 - 10 + 1)) + 10;
                                 newEntity = {
                                     private_uuid: privateUuid,
                                     public_uuid: publicUuid,
                                     type: 'filter',
                                     attributes: {
-                                        bits: filterBits,
-                                        attack: 1,
-                                        defence: 1,
-                                        current_health: 10,
-                                        max_health: 10,
+                                        bits: bits,
+                                        attack: attack,
+                                        defence: defence,
+                                        current_health: maxHealth,
+                                        max_health: maxHealth,
                                         heal_items: 0
                                     }
                                 };
