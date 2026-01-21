@@ -1,0 +1,20 @@
+com.demensdeum.flame-steel-death-mask-2.chest.model.glb
+Low poly treasure chest
+3D Model
+Avatar of cattleya
+cattleya
+https://sketchfab.com/3d-models/low-poly-treasure-chest-ca63751326084866b8df9a6b4c196b3d
+
+com.demensdeum.flame-steel-death-mask-2.filter.model.glb
+Cybernetic Mutant (PSX Style)
+3D Model
+Avatar of JimWing
+Jim Wing
+https://sketchfab.com/3d-models/cybernetic-mutant-psx-style-fffc3a16d76a4279a9a88d355b7be0e7
+
+com.demensdeum.flame-steel-death-mask-2.seeker.model.glb
+Cat with jet pack
+3D Model
+Avatar of muru
+Muru
+https://sketchfab.com/3d-models/cat-with-jet-pack-9afc8fd58c0d4f7d827f2007d6ac1e80
