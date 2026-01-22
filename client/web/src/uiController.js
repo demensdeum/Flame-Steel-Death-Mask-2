@@ -48,4 +48,23 @@ export class UIController {
             terminal.style.display = this.terminalVisible ? "flex" : "none";
         }
     }
+
+    showMessage(text, duration = 4000) {
+        const overlay = document.getElementById("game-message-overlay");
+        const textEl = document.getElementById("game-message-text");
+        if (overlay && textEl) {
+            textEl.innerText = text;
+            overlay.style.display = "flex";
+
+            // Clear any existing timeout
+            if (this._messageTimeout) clearTimeout(this._messageTimeout);
+
+            if (duration > 0) {
+                this._messageTimeout = setTimeout(() => {
+                    overlay.style.display = "none";
+                    this._messageTimeout = null;
+                }, duration);
+            }
+        }
+    }
 }

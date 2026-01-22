@@ -429,6 +429,14 @@ export class Terminal {
             });
             this.println("--- End of Map ---\n");
 
+            if (data.data.id === "1") {
+                setTimeout(() => {
+                    if (this.context.uiController) {
+                        this.context.uiController.showMessage("Welcome back.\nThe service requires you.", 2000);
+                    }
+                }, 2000);
+            }
+
             this.println("Constructing 3D Scene...");
             this.context.minimapController.setGrid(grid);
             this.context.sceneController.removeAllSceneObjectsExceptCamera();
