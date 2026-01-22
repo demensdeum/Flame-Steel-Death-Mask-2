@@ -333,11 +333,11 @@ async function respawnSeeker(privateUuid, publicUuid) {
         const user = await usersCollection.findOne({ private_uuid: privateUuid });
 
         if (user) {
-            // Restore health
-            await usersCollection.updateOne(
-                { private_uuid: privateUuid },
-                { $set: { 'attributes.current_health': user.attributes.max_health } }
-            );
+            // Health restoration removed per user request
+            // await usersCollection.updateOne(
+            //     { private_uuid: privateUuid },
+            //     { $set: { 'attributes.current_health': user.attributes.max_health } }
+            // );
 
             // Update Redis Position
             const redisKey = `user:pos:${privateUuid}`;
@@ -499,6 +499,15 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
                         await mapsCollection.insertOne(map);
                     } else {
                         console.log(`Map ${mapId} found in database.`);
+                    }
+
+                    // Auto-heal if map_id is "1" (Respawn Hub)
+                    if (mapId === "1") {
+                        await usersCollection.updateOne(
+                            { private_uuid: privateUuid },
+                            { $set: { 'attributes.current_health': user.attributes.max_health } }
+                        );
+                        console.log(`User ${privateUuid} auto-healed on entering Map 1.`);
                     }
 
                     // Check and spawn teleport if needed
