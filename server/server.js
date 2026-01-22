@@ -370,6 +370,106 @@ async function respawnSeeker(privateUuid, publicUuid) {
 
 const aiLoopDelay = 2000;
 
+async function getMapFromCacheOrDB(mapId) {
+    const redisKey = `map:data:${mapId}`;
+    const cached = await redisClient.get(redisKey);
+    if (cached) {
+        return JSON.parse(cached);
+    }
+
+    const mapsCollection = db.collection('maps');
+    const map = await mapsCollection.findOne({ id: mapId });
+    if (map) {
+        await redisClient.set(redisKey, JSON.stringify(map), {
+            EX: 60 // 1 minute TTL 
+        });
+    }
+    return map;
+}
+
+const movementLoopDelay = 500;
+
+async function startFilterMovementAI() {
+    setTimeout(async () => {
+        try {
+            const now = Date.now();
+
+            // 1. Fetch all entities
+            const keys = await redisClient.keys('user:pos:*');
+            const entities = [];
+            for (const key of keys) {
+                const dataRaw = await redisClient.get(key);
+                if (dataRaw) {
+                    entities.push(JSON.parse(dataRaw));
+                }
+            }
+
+            // 2. Group for occupancy checks
+            const occupied = new Set();
+            for (const e of entities) {
+                occupied.add(`${e.map_id}:${e.x},${e.y}`);
+            }
+
+            // 3. Process Filters
+            const filters = entities.filter(e => e.type === 'filter');
+
+            for (const filter of filters) {
+                // Check Timing
+                if (filter.next_move_ts && now < filter.next_move_ts) continue;
+
+                // Move logic
+                const map = await getMapFromCacheOrDB(filter.map_id);
+                if (!map) continue;
+
+                const grid = map.grid;
+                const candidates = [
+                    { x: filter.x + 1, y: filter.y },
+                    { x: filter.x - 1, y: filter.y },
+                    { x: filter.x, y: filter.y + 1 },
+                    { x: filter.x, y: filter.y - 1 }
+                ];
+
+                const validMoves = [];
+                for (const pos of candidates) {
+                    // Bounds check
+                    if (pos.y < 0 || pos.y >= grid.length || pos.x < 0 || pos.x >= grid[0].length) continue;
+                    // Wall check
+                    if (grid[pos.y][pos.x] === 'X') continue;
+                    // Occupancy check
+                    if (occupied.has(`${filter.map_id}:${pos.x},${pos.y}`)) continue;
+
+                    validMoves.push(pos);
+                }
+
+                if (validMoves.length > 0) {
+                    const move = validMoves[Math.floor(Math.random() * validMoves.length)];
+
+                    // Update Redis
+                    const nextMoveDelay = 1000 + Math.floor(Math.random() * 2001); // 1000-3000ms
+                    filter.x = move.x;
+                    filter.y = move.y;
+                    filter.next_move_ts = now + nextMoveDelay;
+
+                    const redisKey = `user:pos:${filter.private_uuid}`;
+                    await redisClient.set(redisKey, JSON.stringify(filter), { EX: 600 });
+
+                    // console.log(`Filter ${filter.public_uuid} moved to (${move.x}, ${move.y})`);
+                } else {
+                    // Can't move, just reset timer so it tries again later
+                    const nextMoveDelay = 1000 + Math.floor(Math.random() * 2001);
+                    filter.next_move_ts = now + nextMoveDelay;
+                    const redisKey = `user:pos:${filter.private_uuid}`;
+                    await redisClient.set(redisKey, JSON.stringify(filter), { EX: 600 });
+                }
+            }
+
+        } catch (err) {
+            console.error('Error in Movement AI loop:', err);
+        }
+        startFilterMovementAI();
+    }, movementLoopDelay);
+}
+
 async function startEntitiesAI() {
     setTimeout(async () => {
         try {
@@ -448,6 +548,7 @@ const port = process.env.PORT || 8080;
 Promise.all([connectMongo(), connectRedis()]).then(() => {
     startEntitiesSpawner();
     startEntitiesAI();
+    startFilterMovementAI();
     const wss = new WebSocketServer({ port });
     console.log(`WebSocket server started on port ${port}`);
 
