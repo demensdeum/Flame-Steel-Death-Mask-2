@@ -300,10 +300,82 @@ async function startEntitiesSpawner() {
     }, delay);
 }
 
+const aiLoopDelay = 2000;
+
+async function startEntitiesAI() {
+    setTimeout(async () => {
+        try {
+            // 1. Fetch all entity positions from Redis
+            const keys = await redisClient.keys('user:pos:*');
+            const entities = [];
+
+            for (const key of keys) {
+                const dataRaw = await redisClient.get(key);
+                if (dataRaw) {
+                    entities.push(JSON.parse(dataRaw));
+                }
+            }
+
+            // 2. Identify Seekers and Filters
+            const seekers = entities.filter(e => e.type === 'seeker');
+            const filters = entities.filter(e => e.type === 'filter');
+
+            if (seekers.length > 0 && filters.length > 0) {
+                const usersCollection = db.collection('users');
+
+                // 3. Check for attacks
+                for (const seeker of seekers) {
+                    for (const filter of filters) {
+                        // Check Map
+                        if (seeker.map_id !== filter.map_id) continue;
+
+                        // Check Distance (Manhattan = 1)
+                        const dist = Math.abs(seeker.x - filter.x) + Math.abs(seeker.y - filter.y);
+                        if (dist === 1) {
+                            // 4. Resolve Attack
+                            // Fetch full attributes from Mongo
+                            const seekerDoc = await usersCollection.findOne({ private_uuid: seeker.private_uuid });
+                            const filterDoc = await usersCollection.findOne({ private_uuid: filter.private_uuid });
+
+                            if (seekerDoc && filterDoc && seekerDoc.attributes && filterDoc.attributes) {
+                                // Formula: damage = max(0, random(0, filter_attack) - seeker_defence)
+                                const filterAttack = filterDoc.attributes.attack || 0;
+                                const seekerDefence = seekerDoc.attributes.defence || 0;
+
+                                const rawAttackRoll = Math.floor(Math.random() * (filterAttack + 1));
+                                const damage = Math.max(0, rawAttackRoll - seekerDefence);
+
+                                if (damage > 0) {
+                                    const newHealth = Math.max(0, seekerDoc.attributes.current_health - damage);
+
+                                    await usersCollection.updateOne(
+                                        { private_uuid: seeker.private_uuid },
+                                        { $set: { 'attributes.current_health': newHealth } }
+                                    );
+
+                                    console.log(`AI Attack: Filter ${filter.public_uuid} hit Seeker ${seeker.public_uuid} for ${damage}. Health: ${seekerDoc.attributes.current_health} -> ${newHealth}`);
+                                } else {
+                                    // Optional: Log misses or 0 damage hits? keeping logs clean for now, maybe just simplified log
+                                    // console.log(`AI Attack: Filter ${filter.public_uuid} attacked Seeker ${seeker.public_uuid} but damage was 0.`);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Error in AI loop:', err);
+        }
+
+        startEntitiesAI();
+    }, aiLoopDelay);
+}
+
 const port = process.env.PORT || 8080;
 
 Promise.all([connectMongo(), connectRedis()]).then(() => {
     startEntitiesSpawner();
+    startEntitiesAI();
     const wss = new WebSocketServer({ port });
     console.log(`WebSocket server started on port ${port}`);
 
