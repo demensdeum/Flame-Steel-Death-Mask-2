@@ -538,6 +538,14 @@ export class Terminal {
             // Update the attributes display silently (don't print to terminal)
             if (data.attributes) {
                 this.updateAttributesDisplay(data.attributes);
+
+                if (data.attributes.current_health <= 0) {
+                    this.println("Health critical! Emergency teleport to Respawn Hub...");
+                    const uuid = this.privateUuidForAttributes || this._lastRegisterPrivateUuid;
+                    if (uuid) {
+                        this.handleCommand(`map 1 ${uuid}`);
+                    }
+                }
             }
         } else if (data.type === "heal") {
             if (data.status === "OK") {
