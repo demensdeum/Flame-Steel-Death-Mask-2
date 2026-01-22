@@ -6,6 +6,35 @@ export class NavigationController {
         this.facingAngle = 0; // 0, 90, 180, 270 degrees
 
         this.initButtons();
+        this.initKeyboard();
+    }
+
+    initKeyboard() {
+        document.addEventListener("keydown", (event) => {
+            // Prevent default scrolling behavior for arrow keys
+            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) {
+                // event.preventDefault(); // Optional: might block terminal input if not careful. 
+                // However, terminal input is an <input> element. 
+                // If the user is typing in the terminal, we probably shouldn't move.
+                // Let's check active element.
+                if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+            }
+
+            switch (event.key) {
+                case "ArrowUp":
+                    this.moveForward();
+                    break;
+                case "ArrowDown":
+                    this.moveBackward();
+                    break;
+                case "ArrowLeft":
+                    this.rotateLeft();
+                    break;
+                case "ArrowRight":
+                    this.rotateRight();
+                    break;
+            }
+        });
     }
 
     initButtons() {

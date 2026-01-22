@@ -300,6 +300,74 @@ async function startEntitiesSpawner() {
     }, delay);
 }
 
+async function respawnSeeker(privateUuid, publicUuid) {
+    try {
+        const mapId = "1";
+        const mapsCollection = db.collection('maps');
+        let map = await mapsCollection.findOne({ id: mapId });
+
+        if (!map) {
+            console.log(`Respawn: Map ${mapId} not found, generating...`);
+            map = generateMap(mapId);
+            await mapsCollection.insertOne(map);
+        }
+
+        // Find random free spot
+        const grid = map.grid;
+        const freeSpots = [];
+        for (let y = 0; y < grid.length; y++) {
+            for (let x = 0; x < grid[y].length; x++) {
+                if (grid[y][x] === '_') {
+                    freeSpots.push({ x, y });
+                }
+            }
+        }
+
+        if (freeSpots.length === 0) {
+            console.error("Respawn failed: Map 1 has no free spots!");
+            return;
+        }
+
+        const spot = freeSpots[Math.floor(Math.random() * freeSpots.length)];
+        const usersCollection = db.collection('users');
+        const user = await usersCollection.findOne({ private_uuid: privateUuid });
+
+        if (user) {
+            // Restore health
+            await usersCollection.updateOne(
+                { private_uuid: privateUuid },
+                { $set: { 'attributes.current_health': user.attributes.max_health } }
+            );
+
+            // Update Redis Position
+            const redisKey = `user:pos:${privateUuid}`;
+            const oldDataRaw = await redisClient.get(redisKey);
+            if (oldDataRaw) {
+                const oldData = JSON.parse(oldDataRaw);
+                const oldMapSetKey = `map:entities:${oldData.map_id}`;
+                await redisClient.sRem(oldMapSetKey, privateUuid);
+            }
+
+            const newMapSetKey = `map:entities:${mapId}`;
+            await redisClient.sAdd(newMapSetKey, privateUuid);
+
+            const newData = {
+                private_uuid: privateUuid,
+                public_uuid: publicUuid,
+                x: spot.x,
+                y: spot.y,
+                map_id: mapId,
+                type: 'seeker'
+            };
+
+            await redisClient.set(redisKey, JSON.stringify(newData), { EX: 600 });
+            console.log(`Respawn: Seeker ${publicUuid} respawned on Map 1 at (${spot.x}, ${spot.y}) with full ${user.attributes.max_health} HP.`);
+        }
+    } catch (err) {
+        console.error("Error in respawnSeeker:", err);
+    }
+}
+
 const aiLoopDelay = 2000;
 
 async function startEntitiesAI() {
@@ -354,6 +422,10 @@ async function startEntitiesAI() {
                                     );
 
                                     console.log(`AI Attack: Filter ${filter.public_uuid} hit Seeker ${seeker.public_uuid} for ${damage}. Health: ${seekerDoc.attributes.current_health} -> ${newHealth}`);
+
+                                    if (newHealth <= 0) {
+                                        await respawnSeeker(seeker.private_uuid, seeker.public_uuid);
+                                    }
                                 } else {
                                     // Optional: Log misses or 0 damage hits? keeping logs clean for now, maybe just simplified log
                                     // console.log(`AI Attack: Filter ${filter.public_uuid} attacked Seeker ${seeker.public_uuid} but damage was 0.`);
@@ -741,28 +813,34 @@ Promise.all([connectMongo(), connectRedis()]).then(() => {
 
                     console.log(`Attack: ${attacker.public_uuid} attacked ${target.public_uuid} for ${damage} damage. Target health: ${target.attributes.current_health} -> ${newHealth}`);
 
-                    // 9. Check if target is dead (filter type only)
+                    // 9. Check if target is dead
                     let entityRemoved = false;
                     let bitsGained = 0;
-                    if (newHealth <= 0 && target.type === 'filter') {
-                        // Transfer bits
-                        bitsGained = target.attributes.bits || 0;
-                        const newAttackerBits = (attacker.attributes.bits || 0) + bitsGained;
+                    if (newHealth <= 0) {
+                        if (target.type === 'filter') {
+                            // Transfer bits
+                            bitsGained = target.attributes.bits || 0;
+                            const newAttackerBits = (attacker.attributes.bits || 0) + bitsGained;
 
-                        await usersCollection.updateOne(
-                            { private_uuid: attacker_private_uuid },
-                            { $set: { 'attributes.bits': newAttackerBits } }
-                        );
+                            await usersCollection.updateOne(
+                                { private_uuid: attacker_private_uuid },
+                                { $set: { 'attributes.bits': newAttackerBits } }
+                            );
 
-                        // Remove from MongoDB
-                        await usersCollection.deleteOne({ private_uuid: targetPrivateUuid });
+                            // Remove from MongoDB
+                            await usersCollection.deleteOne({ private_uuid: targetPrivateUuid });
 
-                        // Remove from Redis
-                        const targetRedisKey = `user:pos:${targetPrivateUuid}`;
-                        await redisClient.del(targetRedisKey);
+                            // Remove from Redis
+                            const targetRedisKey = `user:pos:${targetPrivateUuid}`;
+                            await redisClient.del(targetRedisKey);
 
-                        entityRemoved = true;
-                        console.log(`Filter entity ${target.public_uuid} removed (health <= 0). Attacker ${attacker.public_uuid} gained ${bitsGained} bits.`);
+                            entityRemoved = true;
+                            console.log(`Filter entity ${target.public_uuid} removed (health <= 0). Attacker ${attacker.public_uuid} gained ${bitsGained} bits.`);
+                        } else if (target.type === 'seeker' && attacker.type === 'filter') {
+                            // Seeker killed by Filter (Manual/PVP?) -> Respawn
+                            await respawnSeeker(target.private_uuid, target.public_uuid);
+                            // entityRemoved is false because they just moved/healed
+                        }
                     }
 
                     // 10. Send response
