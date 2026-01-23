@@ -7,6 +7,7 @@ export class NavigationController {
 
         this.initButtons();
         this.initKeyboard();
+        this.lastMoveTime = 0;
     }
 
     initKeyboard() {
@@ -84,6 +85,11 @@ export class NavigationController {
     }
 
     sendTeleportMove(direction) {
+        const now = Date.now();
+        if (now - this.lastMoveTime < 350) {
+            return;
+        }
+
         const terminal = this.context.terminal;
         if (!terminal.lastTeleportMapId || !terminal.lastTeleportPrivateUuid) {
             terminal.println("Error: You must 'map' first to initialize position.");
@@ -118,6 +124,7 @@ export class NavigationController {
             nextY,
             terminal.lastTeleportPrivateUuid
         );
+        this.lastMoveTime = now;
     }
 
     attack() {
