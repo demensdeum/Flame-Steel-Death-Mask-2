@@ -430,6 +430,11 @@ export class Terminal {
             });
             this.println("--- End of Map ---\n");
 
+            const layerSpan = document.getElementById('attr-layer');
+            if (layerSpan) {
+                layerSpan.textContent = data.data.id;
+            }
+
             // Debounce the heavy reconstruction logic
             if (this.mapReconstructionTimeout) {
                 clearTimeout(this.mapReconstructionTimeout);
