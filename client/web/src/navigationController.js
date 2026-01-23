@@ -8,6 +8,8 @@ export class NavigationController {
         this.initButtons();
         this.initKeyboard();
         this.lastMoveTime = 0;
+        this.moving = false;
+        this.smoothMoveDuration = 360;
     }
 
     initKeyboard() {
@@ -77,15 +79,18 @@ export class NavigationController {
 
 
     moveForward() {
-        this.sendTeleportMove(1);
+        this.smoothMove(1);
     }
 
     moveBackward() {
-        this.sendTeleportMove(-1);
+        this.smoothMove(-1);
     }
 
-    sendTeleportMove(direction) {
+    smoothMove(direction) {
+        if (this.moving) return;
+
         const now = Date.now();
+        // Simple cooldown check, though 'moving' flag handles most
         if (now - this.lastMoveTime < 350) {
             return;
         }
@@ -97,9 +102,6 @@ export class NavigationController {
         }
 
         const rad = (this.facingAngle * Math.PI) / 180;
-        // 0 deg = +X, 90 deg = +Z, 180 deg = -X, 270 deg = -Z
-
-
         const dx = Math.round(Math.cos(rad) * direction);
         const dy = Math.round(Math.sin(rad) * direction);
 
@@ -118,13 +120,49 @@ export class NavigationController {
             }
         }
 
-        terminal.sendTeleport(
-            terminal.lastTeleportMapId,
-            nextX,
-            nextY,
-            terminal.lastTeleportPrivateUuid
-        );
-        this.lastMoveTime = now;
+        // Start Animation
+        this.moving = true;
+        const camera = this.context.sceneController.camera;
+        const controls = this.context.sceneController.debugControls;
+
+        const startX = camera.position.x;
+        const startZ = camera.position.z;
+        const targetX = startX + dx;
+        const targetZ = startZ + dy;
+
+        const startTime = performance.now();
+
+        const animate = (time) => {
+            const elapsed = time - startTime;
+            const progress = Math.min(elapsed / this.smoothMoveDuration, 1);
+
+            // Linear interpolation for now, could use easing
+            camera.position.x = startX + (targetX - startX) * progress;
+            camera.position.z = startZ + (targetZ - startZ) * progress;
+
+            // Keep looking in the same direction relative to camera
+            const lookDist = 1;
+            const lookX = camera.position.x + Math.cos(rad) * lookDist;
+            const lookZ = camera.position.z + Math.sin(rad) * lookDist;
+            controls.target.set(lookX, camera.position.y, lookZ);
+            controls.update();
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Finished
+                terminal.sendTeleport(
+                    terminal.lastTeleportMapId,
+                    nextX,
+                    nextY,
+                    terminal.lastTeleportPrivateUuid
+                );
+                this.lastMoveTime = Date.now();
+                this.moving = false;
+                this.context.minimapController.update();
+            }
+        };
+        requestAnimationFrame(animate);
     }
 
     attack() {
