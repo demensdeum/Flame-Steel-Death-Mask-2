@@ -12,6 +12,8 @@ export class UIController {
             toggleButton.addEventListener("click", () => this.toggleTerminal());
         }
 
+        this.checkAutoLogin();
+
         const joinButton = document.getElementById("registration-join");
         const nameInput = document.getElementById("registration-name");
         console.log("UIController: joinButton:", joinButton, "nameInput:", nameInput);
@@ -20,6 +22,7 @@ export class UIController {
                 const name = nameInput.value.trim();
                 console.log("UIController: Join clicked, name:", name);
                 if (name) {
+                    localStorage.setItem("flame-steel-codename", name);
                     this.context.terminal.registerAndJoin(name);
                 } else {
                     alert("Please enter a codename.");
@@ -33,38 +36,51 @@ export class UIController {
             });
         }
     }
+}
 
-    hideRegistrationOverlay() {
-        const overlay = document.getElementById("registration-overlay");
-        if (overlay) {
-            overlay.style.display = "none";
+checkAutoLogin() {
+    const storedName = localStorage.getItem("flame-steel-codename");
+    if (storedName) {
+        const nameInput = document.getElementById("registration-name");
+        if (nameInput) {
+            nameInput.value = storedName;
+        }
+        console.log("UIController: Auto-login with:", storedName);
+        this.context.terminal.registerAndJoin(storedName);
+    }
+}
+
+hideRegistrationOverlay() {
+    const overlay = document.getElementById("registration-overlay");
+    if (overlay) {
+        overlay.style.display = "none";
+    }
+}
+
+toggleTerminal() {
+    const terminal = document.getElementById("terminal");
+    if (terminal) {
+        this.terminalVisible = !this.terminalVisible;
+        terminal.style.display = this.terminalVisible ? "flex" : "none";
+    }
+}
+
+showMessage(text, duration = 4000) {
+    const overlay = document.getElementById("game-message-overlay");
+    const textEl = document.getElementById("game-message-text");
+    if (overlay && textEl) {
+        textEl.innerText = text;
+        overlay.style.display = "flex";
+
+        // Clear any existing timeout
+        if (this._messageTimeout) clearTimeout(this._messageTimeout);
+
+        if (duration > 0) {
+            this._messageTimeout = setTimeout(() => {
+                overlay.style.display = "none";
+                this._messageTimeout = null;
+            }, duration);
         }
     }
-
-    toggleTerminal() {
-        const terminal = document.getElementById("terminal");
-        if (terminal) {
-            this.terminalVisible = !this.terminalVisible;
-            terminal.style.display = this.terminalVisible ? "flex" : "none";
-        }
-    }
-
-    showMessage(text, duration = 4000) {
-        const overlay = document.getElementById("game-message-overlay");
-        const textEl = document.getElementById("game-message-text");
-        if (overlay && textEl) {
-            textEl.innerText = text;
-            overlay.style.display = "flex";
-
-            // Clear any existing timeout
-            if (this._messageTimeout) clearTimeout(this._messageTimeout);
-
-            if (duration > 0) {
-                this._messageTimeout = setTimeout(() => {
-                    overlay.style.display = "none";
-                    this._messageTimeout = null;
-                }, duration);
-            }
-        }
-    }
+}
 }
