@@ -82,6 +82,7 @@ export class SceneController {
         this.debugControls = new OrbitControls(camera, renderer.domElement);
         debugPrint(this.debugControls);
         this.instancedMeshes = {};
+        this.pointLights = [];
     }
     lockOrbitControls() {
         this.debugControls.maxPolarAngle = Math.PI / 2 - Utils.degreesToRadians(50);
@@ -179,6 +180,17 @@ export class SceneController {
         this.scene.add(light);
     }
 
+    addPointLight(position, color = 0xffffff, intensity = 1.0) {
+        const light = new THREE.PointLight(color, intensity);
+        light.position.set(position.x, position.y, position.z);
+        if (this.shadowsEnabled) {
+            light.castShadow = true;
+        }
+        this.scene.add(light);
+        this.pointLights.push(light);
+        return light;
+    }
+
     saveGameSettings() {
         this.gameSettings.save();
     }
@@ -266,6 +278,14 @@ export class SceneController {
             instancedMesh.dispose();
         });
         this.instancedMeshes = {};
+
+        this.pointLights.forEach((light) => {
+            this.scene.remove(light);
+            if (light.shadow && light.shadow.map) {
+                light.shadow.map.dispose();
+            }
+        });
+        this.pointLights = [];
     }
     removeObjectWithName(name) {
         const sceneObject = this.objects[name];
