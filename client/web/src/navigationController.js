@@ -9,7 +9,7 @@ export class NavigationController {
         this.initKeyboard();
         this.lastMoveTime = 0;
         this.moving = false;
-        this.smoothMoveDuration = 360;
+        this.smoothMoveDuration = 370;
     }
 
     initKeyboard() {
@@ -125,11 +125,7 @@ export class NavigationController {
     smoothMove(direction) {
         if (this.moving) return;
 
-        const now = Date.now();
-        // Simple cooldown check, though 'moving' flag handles most
-        if (now - this.lastMoveTime < 350) {
-            return;
-        }
+        // No cooldown check as requested
 
         const terminal = this.context.terminal;
         if (!terminal.lastTeleportMapId || !terminal.lastTeleportPrivateUuid) {
