@@ -38,9 +38,10 @@ export class SceneController {
         this.physicsEnabled = physicsEnabled;
         this.gameSettings = gameSettings;
         this.flyMode = flyMode;
+        this.scaleFactor = 10;
         this.loadingPlaceholderTexture = this.textureLoader.load(Paths.texturePath("com.demensdeum.loading"));
         this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(75, this.windowWidth() / this.windowHeight(), 0.1, 1000);
+        this.camera = new THREE.PerspectiveCamera(75, this.windowWidth() / this.windowHeight(), 0.1, 1000 * this.scaleFactor);
         this.scene.add(this.camera);
         const cameraSceneObject = new SceneObject(Names.Camera, Names.Camera, "NONE", "NONE", this.camera, true, null, new Date().getTime());
         this.objects[Names.Camera] = cameraSceneObject;
@@ -131,7 +132,8 @@ export class SceneController {
         const sceneObject = this.sceneObject(objectName);
     }
     controlsRequireObjectTranslate(_, objectName, x, y, z) {
-        this.translateObject(objectName, x, y, z);
+        const s = this.scaleFactor;
+        this.translateObject(objectName, x * s, y * s, z * s);
     }
     controlsRequireObjectRotation(_, objectName, euler) {
         const sceneObject = this.sceneObject(objectName);
@@ -151,7 +153,8 @@ export class SceneController {
         return this.canMoveBackward;
     }
     addCommand(name, type, time, x, y, z, rX, rY, rZ, nextCommandName) {
-        const position = new THREE.Vector3(x, y, z);
+        const s = this.scaleFactor;
+        const position = new THREE.Vector3(x * s, y * s, z * s);
         const rotation = new THREE.Vector3(rX, rY, rZ);
         if (type == "teleport") {
             const command = new SceneObjectCommandTeleport(name, time, position, rotation, nextCommandName);
@@ -185,8 +188,9 @@ export class SceneController {
     }
 
     addPointLight(objectName, position, color = 0xffffff, intensity = 1.0) {
+        const s = this.scaleFactor;
         const light = new THREE.PointLight(color, intensity);
-        light.position.set(position.x, position.y, position.z);
+        light.position.set(position.x * s, position.y * s, position.z * s);
         if (this.shadowsEnabled) {
             light.castShadow = true;
         }
@@ -344,7 +348,8 @@ export class SceneController {
     }
     addModelAt(name, modelName, x, y, z, rX, rY, rZ, isMovable, controls, boxSize = 1.0, successCallback = () => { }, color = 0xFFFFFF, transparent = false, opacity = 1.0) {
         debugPrint("addModelAt");
-        const boxGeometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+        const s = this.scaleFactor;
+        const boxGeometry = new THREE.BoxGeometry(boxSize * s, boxSize * s, boxSize * s);
         const boxMaterial = new THREE.MeshStandardMaterial({
             color: color,
             map: this.loadingPlaceholderTexture,
@@ -352,9 +357,9 @@ export class SceneController {
             opacity: 0.7
         });
         const box = new THREE.Mesh(boxGeometry, boxMaterial);
-        box.position.x = x;
-        box.position.y = y;
-        box.position.z = z;
+        box.position.x = x * s;
+        box.position.y = y * s;
+        box.position.z = z * s;
         box.rotation.x = rX;
         box.rotation.y = rY;
         box.rotation.z = rZ;
@@ -380,6 +385,7 @@ export class SceneController {
             model.rotation.x = box.rotation.x;
             model.rotation.y = box.rotation.y;
             model.rotation.z = box.rotation.z;
+            model.scale.set(self.scaleFactor, self.scaleFactor, self.scaleFactor);
             self.scene.remove(box);
             sceneObject.threeObject = model;
             sceneObject.animations = container.animations;
@@ -432,8 +438,9 @@ export class SceneController {
     }
     addBoxAt(name, x, y, z, textureName = "com.demensdeum.failback", size = 1.0, color = 0xFFFFFF, transparent = false, opacity = 1.0) {
         debugPrint("addBoxAt: " + x + " " + y + " " + z);
+        const s = this.scaleFactor;
         const texturePath = Paths.texturePath(textureName);
-        const boxGeometry = new THREE.BoxGeometry(size, size, size);
+        const boxGeometry = new THREE.BoxGeometry(size * s, size * s, size * s);
         const material = new THREE.MeshStandardMaterial({
             color: color,
             map: this.loadingPlaceholderTexture,
@@ -453,17 +460,18 @@ export class SceneController {
         });
         this.texturesToLoad.push(newMaterial);
         const box = new THREE.Mesh(boxGeometry, material);
-        box.position.x = x;
-        box.position.y = y;
-        box.position.z = z;
+        box.position.x = x * s;
+        box.position.y = y * s;
+        box.position.z = z * s;
         const sceneObject = new SceneObject(name, "Box", textureName, "NONE", box, false, null, new Date().getTime());
         sceneObject.meshes.push(box);
         this.addSceneObject(sceneObject);
     }
     addPlaneAt(name, x, y, z, width, height, textureName, color = 0xFFFFFF, resetDepthBuffer = false, transparent = false, opacity = 1.0, receiveShadow = true) {
         debugPrint("addPlaneAt");
+        const s = this.scaleFactor;
         const texturePath = Paths.texturePath(textureName);
-        const planeGeometry = new THREE.PlaneGeometry(width, height);
+        const planeGeometry = new THREE.PlaneGeometry(width * s, height * s);
         const material = new THREE.MeshStandardMaterial({
             color: color,
             map: this.loadingPlaceholderTexture,
@@ -490,9 +498,9 @@ export class SceneController {
             newMaterial.map.colorSpace = THREE.SRGBColorSpace;
         }
         const plane = new THREE.Mesh(planeGeometry, material);
-        plane.position.x = x;
-        plane.position.y = y;
-        plane.position.z = z;
+        plane.position.x = x * s;
+        plane.position.y = y * s;
+        plane.position.z = z * s;
         if (this.shadowsEnabled) {
             plane.receiveShadow = receiveShadow;
         }
@@ -514,6 +522,7 @@ export class SceneController {
     sceneObjectPosition(name) {
         const outputObject = this.sceneObject(name);
         const outputPosition = outputObject.threeObject.position.clone();
+        outputPosition.divideScalar(this.scaleFactor);
         return outputPosition;
     }
     objectCollidesWithObject(alisaName, bobName) {
@@ -541,10 +550,11 @@ export class SceneController {
         return object;
     }
     controlsRequireObjectTeleport(_, name, x, y, z) {
+        const s = this.scaleFactor;
         const sceneObject = this.sceneObject(name);
-        sceneObject.threeObject.position.x = x;
-        sceneObject.threeObject.position.y = y;
-        sceneObject.threeObject.position.z = z;
+        sceneObject.threeObject.position.x = x * s;
+        sceneObject.threeObject.position.y = y * s;
+        sceneObject.threeObject.position.z = z * s;
     }
     translateObject(name, x, y, z) {
         const sceneObject = this.sceneObject(name);
@@ -554,10 +564,11 @@ export class SceneController {
         sceneObject.changeDate = Utils.timestamp();
     }
     moveObjectTo(name, x, y, z) {
-        const sceneObject = this.sceneObject(name, x, y, z);
-        sceneObject.threeObject.position.x = x;
-        sceneObject.threeObject.position.y = y;
-        sceneObject.threeObject.position.z = z;
+        const s = this.scaleFactor;
+        const sceneObject = this.sceneObject(name, x * s, y * s, z * s);
+        sceneObject.threeObject.position.x = x * s;
+        sceneObject.threeObject.position.y = y * s;
+        sceneObject.threeObject.position.z = z * s;
         sceneObject.changeDate = Utils.timestamp();
     }
     rotateObjectTo(name, x, y, z) {
@@ -596,10 +607,12 @@ export class SceneController {
                 instancedMesh.castShadow = self.shadowsEnabled;
                 instancedMesh.receiveShadow = self.shadowsEnabled;
 
+                const s = self.scaleFactor;
                 const dummy = new THREE.Object3D();
                 for (let i = 0; i < count; i++) {
                     const position = positions[i];
-                    dummy.position.set(position.x, position.y, position.z);
+                    dummy.position.set(position.x * s, position.y * s, position.z * s);
+                    dummy.scale.set(s, s, s);
                     dummy.updateMatrix();
                     instancedMesh.setMatrixAt(i, dummy.matrix);
                 }
