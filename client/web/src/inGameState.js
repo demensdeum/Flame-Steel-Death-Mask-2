@@ -8,9 +8,9 @@ export class InGameState extends State {
         this.context.sceneController.setBackgroundColor(0x000000);
     }
     step() {
-        this.context.sceneController.switchSkyboxIfNeeded({
-            name: "com.demensdeum.blue.field",
-            environmentOnly: false
-        });
+        // this.context.sceneController.switchSkyboxIfNeeded({
+        //     name: "com.demensdeum.blue.field",
+        //     environmentOnly: false
+        // });
     }
 }

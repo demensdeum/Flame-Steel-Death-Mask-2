@@ -490,6 +490,10 @@ export class Terminal {
                 }
                 this.context.sceneController.addInstancedModel(modelName, environmentPositions);
 
+                const cameraLightName = "PlayerCameraLight";
+                this.context.sceneController.addPointLight(cameraLightName, { x: 0, y: 0, z: 0 }, 0xffffff, 10.0);
+                this.context.sceneController.stickObjectToObject(cameraLightName, "Camera");
+
                 this.println("3D Scene Construction Complete.");
 
                 // Top-down camera view

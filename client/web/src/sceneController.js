@@ -82,7 +82,7 @@ export class SceneController {
         this.debugControls = new OrbitControls(camera, renderer.domElement);
         debugPrint(this.debugControls);
         this.instancedMeshes = {};
-        this.pointLights = [];
+        this.pointLights = {};
     }
     lockOrbitControls() {
         this.debugControls.maxPolarAngle = Math.PI / 2 - Utils.degreesToRadians(50);
@@ -180,15 +180,22 @@ export class SceneController {
         this.scene.add(light);
     }
 
-    addPointLight(position, color = 0xffffff, intensity = 1.0) {
+    addPointLight(objectName, position, color = 0xffffff, intensity = 1.0) {
         const light = new THREE.PointLight(color, intensity);
         light.position.set(position.x, position.y, position.z);
         if (this.shadowsEnabled) {
             light.castShadow = true;
         }
-        this.scene.add(light);
-        this.pointLights.push(light);
-        return light;
+        const sceneObject = new SceneObject(objectName, "PointLight", "NONE", "NONE", light, false, null, Utils.timestamp());
+        this.addSceneObject(sceneObject);
+        this.pointLights[objectName] = light;
+        return sceneObject;
+    }
+
+    stickObjectToObject(childName, parentName) {
+        const child = this.pointLights[childName] || this.sceneObject(childName).threeObject;
+        const parent = this.pointLights[parentName] || this.sceneObject(parentName).threeObject;
+        parent.add(child);
     }
 
     saveGameSettings() {
@@ -279,13 +286,14 @@ export class SceneController {
         });
         this.instancedMeshes = {};
 
-        this.pointLights.forEach((light) => {
-            this.scene.remove(light);
+        Object.keys(this.pointLights).forEach((name) => {
+            const light = this.pointLights[name];
+            light.removeFromParent();
             if (light.shadow && light.shadow.map) {
                 light.shadow.map.dispose();
             }
         });
-        this.pointLights = [];
+        this.pointLights = {};
     }
     removeObjectWithName(name) {
         const sceneObject = this.objects[name];
