@@ -41,6 +41,7 @@ export class SceneController {
         this.loadingPlaceholderTexture = this.textureLoader.load(Paths.texturePath("com.demensdeum.loading"));
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, this.windowWidth() / this.windowHeight(), 0.1, 1000);
+        this.scene.add(this.camera);
         const cameraSceneObject = new SceneObject(Names.Camera, Names.Camera, "NONE", "NONE", this.camera, true, null, new Date().getTime());
         this.objects[Names.Camera] = cameraSceneObject;
 
@@ -83,6 +84,9 @@ export class SceneController {
         debugPrint(this.debugControls);
         this.instancedMeshes = {};
         this.pointLights = {};
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+        this.scene.add(ambientLight);
     }
     lockOrbitControls() {
         this.debugControls.maxPolarAngle = Math.PI / 2 - Utils.degreesToRadians(50);
