@@ -14,26 +14,28 @@ export class NavigationController {
 
     initKeyboard() {
         document.addEventListener("keydown", (event) => {
-            // Prevent default scrolling behavior for arrow keys
-            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) {
-                // event.preventDefault(); // Optional: might block terminal input if not careful. 
-                // However, terminal input is an <input> element. 
-                // If the user is typing in the terminal, we probably shouldn't move.
-                // Let's check active element.
+            const key = event.key.toLowerCase();
+            const navigationKeys = ["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "s", "a", "d"];
+
+            if (navigationKeys.includes(key)) {
                 if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
             }
 
-            switch (event.key) {
-                case "ArrowUp":
+            switch (key) {
+                case "arrowup":
+                case "w":
                     this.moveForward();
                     break;
-                case "ArrowDown":
+                case "arrowdown":
+                case "s":
                     this.moveBackward();
                     break;
-                case "ArrowLeft":
+                case "arrowleft":
+                case "a":
                     this.rotateLeft();
                     break;
-                case "ArrowRight":
+                case "arrowright":
+                case "d":
                     this.rotateRight();
                     break;
             }
