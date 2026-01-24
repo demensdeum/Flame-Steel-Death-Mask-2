@@ -51,15 +51,51 @@ export class NavigationController {
     }
 
     rotateLeft() {
-        this.facingAngle = (this.facingAngle - 90 + 360) % 360;
-        this.updateCameraRotation();
+        this.smoothRotate(-1);
     }
 
     rotateRight() {
-        this.facingAngle = (this.facingAngle + 90) % 360;
-        this.updateCameraRotation();
+        this.smoothRotate(1);
     }
 
+    smoothRotate(direction) {
+        if (this.moving) return;
+
+        this.moving = true;
+        const startAngle = this.facingAngle;
+        const targetAngle = startAngle + (direction * 90);
+        const startTime = performance.now();
+
+        const camera = this.context.sceneController.camera;
+        const controls = this.context.sceneController.debugControls;
+
+        const animate = (time) => {
+            const elapsed = time - startTime;
+            const progress = Math.min(elapsed / this.smoothMoveDuration, 1);
+
+            // Interpolate angle
+            const currentAngle = startAngle + (targetAngle - startAngle) * progress;
+            const rad = (currentAngle * Math.PI) / 180;
+
+            // Calculate new look target based on current interpolated angle
+            const lookDistance = 1;
+            const targetX = camera.position.x + Math.cos(rad) * lookDistance;
+            const targetZ = camera.position.z + Math.sin(rad) * lookDistance;
+
+            controls.target.set(targetX, camera.position.y, targetZ);
+            controls.update();
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Finished
+                this.facingAngle = (Math.round(targetAngle) + 360) % 360;
+                this.moving = false;
+                this.updateCameraRotation(); // Ensure final snap is exact
+            }
+        };
+        requestAnimationFrame(animate);
+    }
 
     updateCameraRotation() {
         const rad = (this.facingAngle * Math.PI) / 180;
