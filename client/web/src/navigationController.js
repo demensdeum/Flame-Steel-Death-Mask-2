@@ -15,7 +15,7 @@ export class NavigationController {
     initKeyboard() {
         document.addEventListener("keydown", (event) => {
             const key = event.key.toLowerCase();
-            const navigationKeys = ["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "s", "a", "d"];
+            const navigationKeys = ["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "s", "a", "d", "ц", "ы", "ф", "в"];
 
             if (navigationKeys.includes(key)) {
                 if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
@@ -24,18 +24,22 @@ export class NavigationController {
             switch (key) {
                 case "arrowup":
                 case "w":
+                case "ц":
                     this.moveForward();
                     break;
                 case "arrowdown":
                 case "s":
+                case "ы":
                     this.moveBackward();
                     break;
                 case "arrowleft":
                 case "a":
+                case "ф":
                     this.rotateLeft();
                     break;
                 case "arrowright":
                 case "d":
+                case "в":
                     this.rotateRight();
                     break;
             }
