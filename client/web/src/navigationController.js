@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { Names } from "./names.js";
 
 export class NavigationController {
     constructor(context) {
@@ -72,8 +73,8 @@ export class NavigationController {
         const targetAngle = startAngle + (direction * 90);
         const startTime = performance.now();
 
-        const camera = this.context.sceneController.camera;
-        const controls = this.context.sceneController.debugControls;
+        const sceneController = this.context.sceneController;
+        const currentPos = sceneController.sceneObjectPosition(Names.Camera);
 
         const animate = (time) => {
             const elapsed = time - startTime;
@@ -84,12 +85,13 @@ export class NavigationController {
             const rad = (currentAngle * Math.PI) / 180;
 
             // Calculate new look target based on current interpolated angle
-            const lookDistance = 1;
-            const targetX = camera.position.x + Math.cos(rad) * lookDistance;
-            const targetZ = camera.position.z + Math.sin(rad) * lookDistance;
+            const lookDistance = 0.1;
+            const targetX = currentPos.x + Math.cos(rad) * lookDistance;
+            const targetZ = currentPos.z + Math.sin(rad) * lookDistance;
 
-            controls.target.set(targetX, camera.position.y, targetZ);
-            controls.update();
+            const s = sceneController.scaleFactor;
+            sceneController.debugControls.target.set(targetX * s, currentPos.y * s, targetZ * s);
+            sceneController.debugControls.update();
 
             if (progress < 1) {
                 requestAnimationFrame(animate);
@@ -105,16 +107,17 @@ export class NavigationController {
 
     updateCameraRotation() {
         const rad = (this.facingAngle * Math.PI) / 180;
-        const camera = this.context.sceneController.camera;
-        const controls = this.context.sceneController.debugControls;
+        const sceneController = this.context.sceneController;
+        const currentPos = sceneController.sceneObjectPosition(Names.Camera);
 
         // Calculate new look target based on angle
-        const lookDistance = 1;
-        const targetX = camera.position.x + Math.cos(rad) * lookDistance;
-        const targetZ = camera.position.z + Math.sin(rad) * lookDistance;
+        const lookDistance = 0.1;
+        const targetX = currentPos.x + Math.cos(rad) * lookDistance;
+        const targetZ = currentPos.z + Math.sin(rad) * lookDistance;
 
-        controls.target.set(targetX, camera.position.y, targetZ);
-        controls.update();
+        const s = sceneController.scaleFactor;
+        sceneController.debugControls.target.set(targetX * s, currentPos.y * s, targetZ * s);
+        sceneController.debugControls.update();
         this.context.minimapController.update();
     }
 
@@ -160,11 +163,11 @@ export class NavigationController {
 
         // Start Animation
         this.moving = true;
-        const camera = this.context.sceneController.camera;
-        const controls = this.context.sceneController.debugControls;
+        const sceneController = this.context.sceneController;
+        const startPos = sceneController.sceneObjectPosition(Names.Camera);
 
-        const startX = camera.position.x;
-        const startZ = camera.position.z;
+        const startX = startPos.x;
+        const startZ = startPos.z;
         const targetX = startX + dx;
         const targetZ = startZ + dy;
 
@@ -175,15 +178,19 @@ export class NavigationController {
             const progress = Math.min(elapsed / this.smoothMoveDuration, 1);
 
             // Linear interpolation for now, could use easing
-            camera.position.x = startX + (targetX - startX) * progress;
-            camera.position.z = startZ + (targetZ - startZ) * progress;
+            const currentX = startX + (targetX - startX) * progress;
+            const currentZ = startZ + (targetZ - startZ) * progress;
+
+            sceneController.moveObjectTo(Names.Camera, currentX, startPos.y, currentZ);
 
             // Keep looking in the same direction relative to camera
-            const lookDist = 1;
-            const lookX = camera.position.x + Math.cos(rad) * lookDist;
-            const lookZ = camera.position.z + Math.sin(rad) * lookDist;
-            controls.target.set(lookX, camera.position.y, lookZ);
-            controls.update();
+            const lookDist = 0.1;
+            const lookX = currentX + Math.cos(rad) * lookDist;
+            const lookZ = currentZ + Math.sin(rad) * lookDist;
+
+            const s = sceneController.scaleFactor;
+            sceneController.debugControls.target.set(lookX * s, startPos.y * s, lookZ * s);
+            sceneController.debugControls.update();
 
             if (progress < 1) {
                 requestAnimationFrame(animate);
