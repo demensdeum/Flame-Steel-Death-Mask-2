@@ -38,7 +38,7 @@ export class SceneController {
         this.physicsEnabled = physicsEnabled;
         this.gameSettings = gameSettings;
         this.flyMode = flyMode;
-        this.scaleFactor = 10;
+        this.scaleFactor = 1;
         this.loadingPlaceholderTexture = this.textureLoader.load(Paths.texturePath("com.demensdeum.loading"));
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, this.windowWidth() / this.windowHeight(), 0.1, 1000 * this.scaleFactor);
@@ -85,9 +85,6 @@ export class SceneController {
         debugPrint(this.debugControls);
         this.instancedMeshes = {};
         this.pointLights = {};
-
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
-        this.scene.add(ambientLight);
     }
     lockOrbitControls() {
         this.debugControls.maxPolarAngle = Math.PI / 2 - Utils.degreesToRadians(50);
@@ -193,6 +190,11 @@ export class SceneController {
         light.position.set(position.x * s, position.y * s, position.z * s);
         if (this.shadowsEnabled) {
             light.castShadow = true;
+            light.shadow.bias = -0.005;
+            light.shadow.mapSize.width = 1024;
+            light.shadow.mapSize.height = 1024;
+            light.shadow.camera.near = 0.1;
+            light.shadow.camera.far = 100 * s;
         }
         const sceneObject = new SceneObject(objectName, "PointLight", "NONE", "NONE", light, false, null, Utils.timestamp());
         this.addSceneObject(sceneObject);
