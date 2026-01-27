@@ -1,3 +1,5 @@
+import { Names } from "./names.js";
+
 export class Terminal {
     constructor(context) {
         this.context = context;
@@ -491,7 +493,7 @@ export class Terminal {
                 this.context.sceneController.addInstancedModel(modelName, environmentPositions);
 
                 const cameraLightName = "PlayerCameraLight";
-                this.context.sceneController.addPointLight(cameraLightName, { x: 0, y: 0, z: 0 }, 0xffffff, 25.0);
+                this.context.sceneController.addPointLight(cameraLightName, { x: 0, y: 0, z: 0 }, 0xffffff, 255.0);
                 this.context.sceneController.stickObjectToObject(cameraLightName, "Camera");
 
                 this.println("3D Scene Construction Complete.");
@@ -503,8 +505,9 @@ export class Terminal {
                 const centerZ = mazeHeight / 2;
                 const viewDistance = Math.max(mazeWidth, mazeHeight) * 1.2;
 
-                this.context.sceneController.camera.position.set(centerX, viewDistance, centerZ);
-                this.context.sceneController.debugControls.target.set(centerX, 0, centerZ);
+                this.context.sceneController.moveObjectTo(Names.Camera, centerX, viewDistance, centerZ);
+                const s = this.context.sceneController.scaleFactor;
+                this.context.sceneController.debugControls.target.set(centerX * s, 0, centerZ * s);
                 this.context.sceneController.debugControls.update();
                 this.println("Camera set to top-down view.");
 
@@ -609,8 +612,14 @@ export class Terminal {
             if (this.lastTeleportX !== undefined && this.lastTeleportY !== undefined) {
                 const x = this.lastTeleportX;
                 const z = this.lastTeleportY; // y from grid is z in scene
-                const height = 1; // little bit higher
-                this.context.sceneController.camera.position.set(x, height, z);
+
+                if (this.context.navigationController.isForwardOrBackwardPressed()) {
+                    this.println(`Skipping camera teleport as movement buttons are pressed.`);
+                    return;
+                }
+
+                const height = 1;
+                this.context.sceneController.moveObjectTo(Names.Camera, x, height, z);
 
                 // Respect the current facing direction from NavigationController
                 const rad = (this.context.navigationController.facingAngle * Math.PI) / 180;
@@ -618,7 +627,8 @@ export class Terminal {
                 const targetX = x + Math.cos(rad) * lookDistance;
                 const targetZ = z + Math.sin(rad) * lookDistance;
 
-                this.context.sceneController.debugControls.target.set(targetX, height, targetZ);
+                const s = this.context.sceneController.scaleFactor;
+                this.context.sceneController.debugControls.target.set(targetX * s, height * s, targetZ * s);
                 this.context.sceneController.debugControls.update();
                 this.context.minimapController.update();
                 this.println(`Camera moved to player position: (${x}, ${z})`);
