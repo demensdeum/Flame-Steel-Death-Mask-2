@@ -185,9 +185,9 @@ export class SceneController {
         this.scene.add(light);
     }
 
-    addPointLight(objectName, position, color = 0xffffff, intensity = 1.0) {
+    addPointLight(objectName, position, color = 0xffffff, intensity = 1.0, distance = 0, decay = 2) {
         const s = this.scaleFactor;
-        const light = new THREE.PointLight(color, intensity);
+        const light = new THREE.PointLight(color, intensity, distance * s, decay);
         light.position.set(position.x * s, position.y * s, position.z * s);
         if (this.shadowsEnabled) {
             light.castShadow = true;
@@ -320,6 +320,7 @@ export class SceneController {
             this.ambientLight.dispose();
             this.ambientLight = null;
         }
+        this.scene.fog = null;
     }
     removeObjectWithName(name) {
         const sceneObject = this.objects[name];

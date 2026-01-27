@@ -454,8 +454,8 @@ export class Terminal {
                 this.println("Constructing 3D Scene...");
                 this.context.minimapController.setGrid(grid);
                 this.context.sceneController.removeAllSceneObjectsExceptCamera();
-                this.context.sceneController.addEnvironmentLight(0xffffff, 0.2);
-
+                this.context.sceneController.addEnvironmentLight(0xffffff, 4.0);
+                this.context.sceneController.setFog(0x000000, 1, 40);
 
                 const modelName = "com.demensdeum.flame-steel-death-mask-2.grid";
                 const environmentPositions = [];
@@ -494,7 +494,7 @@ export class Terminal {
                 this.context.sceneController.addInstancedModel(modelName, environmentPositions);
 
                 const cameraLightName = "PlayerCameraLight";
-                this.context.sceneController.addPointLight(cameraLightName, { x: 0, y: 0, z: 0 }, 0xd3d3d3, 1.0);
+                this.context.sceneController.addPointLight(cameraLightName, { x: 0, y: 0, z: 0 }, 0xd3d3d3, 1.0, 5, 2);
                 this.context.sceneController.stickObjectToObject(cameraLightName, "Camera");
 
                 this.println("3D Scene Construction Complete.");
