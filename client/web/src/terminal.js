@@ -454,6 +454,7 @@ export class Terminal {
                 this.println("Constructing 3D Scene...");
                 this.context.minimapController.setGrid(grid);
                 this.context.sceneController.removeAllSceneObjectsExceptCamera();
+                this.context.sceneController.addEnvironmentLight(0xffffff, 0.2);
 
 
                 const modelName = "com.demensdeum.flame-steel-death-mask-2.grid";

@@ -85,6 +85,7 @@ export class SceneController {
         debugPrint(this.debugControls);
         this.instancedMeshes = {};
         this.pointLights = {};
+        this.ambientLight = null;
     }
     lockOrbitControls() {
         this.debugControls.maxPolarAngle = Math.PI / 2 - Utils.degreesToRadians(50);
@@ -202,6 +203,15 @@ export class SceneController {
         return sceneObject;
     }
 
+    addEnvironmentLight(color = 0xffffff, intensity = 0.2) {
+        if (this.ambientLight != null) {
+            this.scene.remove(this.ambientLight);
+            this.ambientLight.dispose();
+        }
+        this.ambientLight = new THREE.AmbientLight(color, intensity);
+        this.scene.add(this.ambientLight);
+    }
+
     stickObjectToObject(childName, parentName) {
         const child = this.pointLights[childName] || this.sceneObject(childName).threeObject;
         const parent = this.pointLights[parentName] || this.sceneObject(parentName).threeObject;
@@ -304,6 +314,12 @@ export class SceneController {
             }
         });
         this.pointLights = {};
+
+        if (this.ambientLight != null) {
+            this.scene.remove(this.ambientLight);
+            this.ambientLight.dispose();
+            this.ambientLight = null;
+        }
     }
     removeObjectWithName(name) {
         const sceneObject = this.objects[name];
