@@ -14,6 +14,8 @@ export class NavigationController {
 
         this.forwardPressed = false;
         this.backwardPressed = false;
+        this.leftPressed = false;
+        this.rightPressed = false;
     }
 
     initKeyboard() {
@@ -41,11 +43,13 @@ export class NavigationController {
                 case "arrowleft":
                 case "a":
                 case "ф":
+                    this.leftPressed = true;
                     this.rotateLeft();
                     break;
                 case "arrowright":
                 case "d":
                 case "в":
+                    this.rightPressed = true;
                     this.rotateRight();
                     break;
             }
@@ -64,6 +68,16 @@ export class NavigationController {
                 case "ы":
                     this.backwardPressed = false;
                     break;
+                case "arrowleft":
+                case "a":
+                case "ф":
+                    this.leftPressed = false;
+                    break;
+                case "arrowright":
+                case "d":
+                case "в":
+                    this.rightPressed = false;
+                    break;
             }
         });
     }
@@ -71,6 +85,8 @@ export class NavigationController {
     initButtons() {
         const upButton = document.getElementById("nav-up");
         const downButton = document.getElementById("nav-down");
+        const leftButton = document.getElementById("nav-left");
+        const rightButton = document.getElementById("nav-right");
 
         upButton?.addEventListener("pointerdown", () => {
             this.forwardPressed = true;
@@ -86,8 +102,20 @@ export class NavigationController {
         downButton?.addEventListener("pointerup", () => this.backwardPressed = false);
         downButton?.addEventListener("pointerleave", () => this.backwardPressed = false);
 
-        document.getElementById("nav-left")?.addEventListener("click", () => this.rotateLeft());
-        document.getElementById("nav-right")?.addEventListener("click", () => this.rotateRight());
+        leftButton?.addEventListener("pointerdown", () => {
+            this.leftPressed = true;
+            this.rotateLeft();
+        });
+        leftButton?.addEventListener("pointerup", () => this.leftPressed = false);
+        leftButton?.addEventListener("pointerleave", () => this.leftPressed = false);
+
+        rightButton?.addEventListener("pointerdown", () => {
+            this.rightPressed = true;
+            this.rotateRight();
+        });
+        rightButton?.addEventListener("pointerup", () => this.rightPressed = false);
+        rightButton?.addEventListener("pointerleave", () => this.rightPressed = false);
+
         document.getElementById("nav-attack")?.addEventListener("click", () => this.attack());
         document.getElementById("nav-unlock")?.addEventListener("click", () => this.unlock());
         document.getElementById("nav-heal")?.addEventListener("click", () => this.heal());
@@ -136,6 +164,12 @@ export class NavigationController {
                 this.facingAngle = (Math.round(targetAngle) + 360) % 360;
                 this.moving = false;
                 this.updateCameraRotation(); // Ensure final snap is exact
+
+                if (this.leftPressed) {
+                    this.rotateLeft();
+                } else if (this.rightPressed) {
+                    this.rotateRight();
+                }
             }
         };
         requestAnimationFrame(animate);
@@ -245,6 +279,12 @@ export class NavigationController {
                 this.lastMoveTime = Date.now();
                 this.moving = false;
                 this.context.minimapController.update();
+
+                if (this.forwardPressed) {
+                    this.moveForward();
+                } else if (this.backwardPressed) {
+                    this.moveBackward();
+                }
             }
         };
         requestAnimationFrame(animate);
