@@ -83,4 +83,67 @@ export class UIController {
             }
         }
     }
+
+    fadeOut(duration = 500) {
+        console.log(`UIController: fadeOut starting, duration: ${duration}`);
+        return new Promise((resolve) => {
+            const overlay = document.getElementById("fade-overlay");
+            if (!overlay) {
+                console.warn("UIController: fade-overlay not found for fadeOut");
+                resolve();
+                return;
+            }
+            overlay.style.transition = `opacity ${duration}ms ease-in-out`;
+            overlay.style.opacity = "1";
+            setTimeout(() => {
+                console.log("UIController: fadeOut complete");
+                resolve();
+            }, duration);
+        });
+    }
+
+    fadeIn(duration = 500) {
+        console.log(`UIController: fadeIn starting, duration: ${duration}`);
+        return new Promise((resolve) => {
+            const overlay = document.getElementById("fade-overlay");
+            if (!overlay) {
+                console.warn("UIController: fade-overlay not found for fadeIn");
+                resolve();
+                return;
+            }
+            overlay.style.transition = `opacity ${duration}ms ease-in-out`;
+            overlay.style.opacity = "0";
+            setTimeout(() => {
+                console.log("UIController: fadeIn complete");
+                resolve();
+            }, duration);
+        });
+    }
+
+    showGUI() {
+        console.log("UIController: showGUI called");
+        const elements = [
+            "minimap-container",
+            "attributes-container",
+            "navigation-controls",
+            "action-controls",
+            "terminal-toggle"
+        ];
+        elements.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (id.includes("controls") || id === "minimap-container") {
+                    console.log(`UIController: showing flex element: ${id}`);
+                    el.style.display = "flex";
+                } else {
+                    console.log(`UIController: showing block element: ${id}`);
+                    el.style.display = "block";
+                }
+
+            } else {
+                console.warn(`UIController: showGUI: element not found: ${id}`);
+            }
+        });
+    }
 }
+

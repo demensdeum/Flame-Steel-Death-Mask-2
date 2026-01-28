@@ -442,106 +442,124 @@ export class Terminal {
                 clearTimeout(this.mapReconstructionTimeout);
             }
 
-            this.mapReconstructionTimeout = setTimeout(() => {
+            this.mapReconstructionTimeout = setTimeout(async () => {
                 if (data.data.id === "1") {
-                    setTimeout(() => {
-                        if (this.context.uiController) {
-                            this.context.uiController.showMessage("Welcome back.\nThe service requires you.", 2000);
-                        }
-                    }, 1000);
+                    this.context.uiController.showGUI();
                 }
+                await this.context.uiController.fadeOut(500);
 
-                this.println("Constructing 3D Scene...");
-                this.context.minimapController.setGrid(grid);
-                this.context.sceneController.removeAllSceneObjectsExceptCamera();
-                this.context.sceneController.addEnvironmentLight(0xffffff, 4.0);
-                this.context.sceneController.setFog(0x000000, 1, 40);
+                try {
+                    if (data.data.id === "1") {
 
-                const modelName = "com.demensdeum.flame-steel-death-mask-2.grid";
-                const environmentPositions = [];
+                        setTimeout(() => {
+                            if (this.context.uiController) {
+                                this.context.uiController.showMessage("Welcome back.\nThe service requires you.", 2000);
+                            }
+                        }, 1000);
+                    }
 
-                for (let y = 0; y < grid.length; y++) {
-                    const row = grid[y];
-                    for (let x = 0; x < row.length; x++) {
-                        const char = row[x];
-                        if (char === 'X') {
-                            // Only add wall if neighbor is ground
-                            let hasGroundNeighbor = false;
-                            for (let dy = -1; dy <= 1; dy++) {
-                                for (let dx = -1; dx <= 1; dx++) {
-                                    if (dx === 0 && dy === 0) continue;
-                                    const ny = y + dy;
-                                    const nx = x + dx;
-                                    if (ny >= 0 && ny < grid.length && nx >= 0 && nx < row.length) {
-                                        if (grid[ny][nx] === '_') {
-                                            hasGroundNeighbor = true;
-                                            break;
+                    this.println("Constructing 3D Scene...");
+                    this.context.minimapController.setGrid(grid);
+                    this.context.sceneController.removeAllSceneObjectsExceptCamera();
+                    this.context.sceneController.addEnvironmentLight(0xffffff, 4.0);
+                    this.context.sceneController.setFog(0x000000, 1, 40);
+
+                    const modelName = "com.demensdeum.flame-steel-death-mask-2.grid";
+                    const environmentPositions = [];
+
+                    for (let y = 0; y < grid.length; y++) {
+                        const row = grid[y];
+                        for (let x = 0; x < row.length; x++) {
+                            const char = row[x];
+                            if (char === 'X') {
+                                // Only add wall if neighbor is ground
+                                let hasGroundNeighbor = false;
+                                for (let dy = -1; dy <= 1; dy++) {
+                                    for (let dx = -1; dx <= 1; dx++) {
+                                        if (dx === 0 && dy === 0) continue;
+                                        const ny = y + dy;
+                                        const nx = x + dx;
+                                        if (ny >= 0 && ny < grid.length && nx >= 0 && nx < row.length) {
+                                            if (grid[ny][nx] === '_') {
+                                                hasGroundNeighbor = true;
+                                                break;
+                                            }
                                         }
                                     }
+                                    if (hasGroundNeighbor) break;
                                 }
-                                if (hasGroundNeighbor) break;
-                            }
 
-                            if (hasGroundNeighbor) {
-                                environmentPositions.push({ x, y: 1, z: y });
+                                if (hasGroundNeighbor) {
+                                    environmentPositions.push({ x, y: 1, z: y });
+                                }
+                            } else if (char === '_') {
+                                environmentPositions.push({ x, y: 0, z: y });
+                                environmentPositions.push({ x, y: 2, z: y });
                             }
-                        } else if (char === '_') {
-                            environmentPositions.push({ x, y: 0, z: y });
-                            environmentPositions.push({ x, y: 2, z: y });
                         }
                     }
-                }
-                this.context.sceneController.addInstancedModel(modelName, environmentPositions);
+                    this.context.sceneController.addInstancedModel(modelName, environmentPositions);
 
-                const cameraLightName = "PlayerCameraLight";
-                this.context.sceneController.addPointLight(cameraLightName, { x: 0, y: 0, z: 0 }, 0xd3d3d3, 1.0, 5, 2);
-                this.context.sceneController.stickObjectToObject(cameraLightName, "Camera");
+                    const cameraLightName = "PlayerCameraLight";
+                    this.context.sceneController.addPointLight(cameraLightName, { x: 0, y: 0, z: 0 }, 0xd3d3d3, 1.0, 5, 2);
+                    this.context.sceneController.stickObjectToObject(cameraLightName, "Camera");
 
-                this.println("3D Scene Construction Complete.");
+                    this.println("3D Scene Construction Complete.");
 
-                // Top-down camera view
-                const mazeHeight = grid.length;
-                const mazeWidth = grid[0].length;
-                const centerX = mazeWidth / 2;
-                const centerZ = mazeHeight / 2;
-                const viewDistance = Math.max(mazeWidth, mazeHeight) * 1.2;
+                    // Top-down camera view
+                    const mazeHeight = grid.length;
+                    const mazeWidth = grid[0].length;
+                    const centerX = mazeWidth / 2;
+                    const centerZ = mazeHeight / 2;
+                    const viewDistance = Math.max(mazeWidth, mazeHeight) * 1.2;
 
-                this.context.sceneController.moveObjectTo(Names.Camera, centerX, viewDistance, centerZ);
-                const s = this.context.sceneController.scaleFactor;
-                this.context.sceneController.debugControls.target.set(centerX * s, 0, centerZ * s);
-                this.context.sceneController.debugControls.update();
-                this.println("Camera set to top-down view.");
+                    this.context.sceneController.moveObjectTo(Names.Camera, centerX, viewDistance, centerZ);
+                    const s = this.context.sceneController.scaleFactor;
+                    this.context.sceneController.debugControls.target.set(centerX * s, 0, centerZ * s);
+                    this.context.sceneController.debugControls.update();
+                    this.println("Camera set to top-down view.");
 
-                // Auto-teleport to food/ground if possible
-                const groundCells = [];
-                for (let y = 0; y < grid.length; y++) {
-                    for (let x = 0; x < grid[y].length; x++) {
-                        if (grid[y][x] === '_') {
-                            groundCells.push({ x, y });
+                    // Auto-teleport to food/ground if possible
+                    const groundCells = [];
+                    for (let y = 0; y < grid.length; y++) {
+                        for (let x = 0; x < grid[y].length; x++) {
+                            if (grid[y][x] === '_') {
+                                groundCells.push({ x, y });
+                            }
                         }
                     }
-                }
 
-                if (groundCells.length > 0) {
-                    const randomCell = groundCells[Math.floor(Math.random() * groundCells.length)];
-                    this.println(`Auto-teleporting to random free space: (${randomCell.x}, ${randomCell.y})`);
+                    if (groundCells.length > 0) {
+                        const randomCell = groundCells[Math.floor(Math.random() * groundCells.length)];
+                        this.println(`Auto-teleporting to random free space: (${randomCell.x}, ${randomCell.y})`);
 
-                    // Explicitly update cache variables to ensure consistency
-                    const mapId = data.data.id;
-                    const privateUuid = this.lastTeleportPrivateUuid;
+                        // Explicitly update cache variables to ensure consistency
+                        const mapId = data.data.id;
+                        const privateUuid = this.lastTeleportPrivateUuid;
 
-                    this.lastTeleportMapId = mapId;
-                    this.lastTeleportX = randomCell.x;
-                    this.lastTeleportY = randomCell.y;
+                        this.lastTeleportMapId = mapId;
+                        this.lastTeleportX = randomCell.x;
+                        this.lastTeleportY = randomCell.y;
 
-                    this.sendTeleport(mapId, randomCell.x, randomCell.y, privateUuid);
+                        this.sendTeleport(mapId, randomCell.x, randomCell.y, privateUuid);
+                    }
+                } catch (e) {
+                    console.error("Terminal: error during map reconstruction:", e);
+                    this.println("Error: Failed to reconstruct map scene.");
+                } finally {
+                    await this.context.uiController.fadeIn(500);
                 }
             }, 1000); // 1 second debounce
+
         } else if (data.type === "register") {
             this.println(`Registration successful! Your public_uuid is: ${data.public_uuid}`);
             this.publicUuid = data.public_uuid;
             this.entityType = this._lastRegisterEntityType;
+
+            this.context.uiController.showGUI();
+
             // Auto-start attributes polling if we have a private_uuid
+
             if (this._lastRegisterPrivateUuid) {
                 this.println("Starting attributes polling...");
                 this.startAttributesPolling(this._lastRegisterPrivateUuid);
