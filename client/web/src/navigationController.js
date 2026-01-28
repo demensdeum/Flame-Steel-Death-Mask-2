@@ -130,15 +130,18 @@ export class NavigationController {
     }
 
     smoothRotate(direction) {
-        if (this.moving) return;
+        const sceneController = this.context.sceneController;
+        if (this.moving || sceneController.isCameraMoving) return;
 
         this.moving = true;
+        sceneController.isCameraMoving = true;
+
         const startAngle = this.facingAngle;
         const targetAngle = startAngle + (direction * 90);
         const startTime = performance.now();
 
-        const sceneController = this.context.sceneController;
         const currentPos = sceneController.sceneObjectPosition(Names.Camera);
+
 
         const animate = (time) => {
             const elapsed = time - startTime;
@@ -163,13 +166,15 @@ export class NavigationController {
                 // Finished
                 this.facingAngle = (Math.round(targetAngle) + 360) % 360;
                 this.moving = false;
+                sceneController.isCameraMoving = false;
                 this.updateCameraRotation(); // Ensure final snap is exact
 
-                if (this.leftPressed) {
+                if (this.leftPressed || sceneController.isCameraMoving) {
                     this.rotateLeft();
-                } else if (this.rightPressed) {
+                } else if (this.rightPressed || sceneController.isCameraMoving) {
                     this.rotateRight();
                 }
+
             }
         };
         requestAnimationFrame(animate);
@@ -206,7 +211,9 @@ export class NavigationController {
     }
 
     smoothMove(direction) {
-        if (this.moving) return;
+        const sceneController = this.context.sceneController;
+        if (this.moving || sceneController.isCameraMoving) return;
+
 
         // No cooldown check as requested
 
@@ -237,8 +244,9 @@ export class NavigationController {
 
         // Start Animation
         this.moving = true;
-        const sceneController = this.context.sceneController;
+        sceneController.isCameraMoving = true;
         const startPos = sceneController.sceneObjectPosition(Names.Camera);
+
 
         const startX = startPos.x;
         const startZ = startPos.z;
@@ -278,13 +286,15 @@ export class NavigationController {
                 );
                 this.lastMoveTime = Date.now();
                 this.moving = false;
+                sceneController.isCameraMoving = false;
                 this.context.minimapController.update();
 
-                if (this.forwardPressed) {
+                if (this.forwardPressed || sceneController.isCameraMoving) {
                     this.moveForward();
-                } else if (this.backwardPressed) {
+                } else if (this.backwardPressed || sceneController.isCameraMoving) {
                     this.moveBackward();
                 }
+
             }
         };
         requestAnimationFrame(animate);

@@ -32,7 +32,6 @@ export class SceneController {
         this.canMoveRight = false;
         this.wireframeRenderer = false;
         this.flyMode = false;
-        this.delegate = null;
         this.highQuality = false;
         this.shadowsEnabled = true;
         this.physicsEnabled = physicsEnabled;
@@ -40,6 +39,9 @@ export class SceneController {
         this.flyMode = flyMode;
         this.scaleFactor = 1;
         this.loadingPlaceholderTexture = this.textureLoader.load(Paths.texturePath("com.demensdeum.loading"));
+        this.isCameraMoving = false;
+
+
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, this.windowWidth() / this.windowHeight(), 0.1, 1000 * this.scaleFactor);
         this.scene.add(this.camera);
