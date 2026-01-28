@@ -628,7 +628,11 @@ export class Terminal {
             }
         } else if (data.type === "teleport") {
             this.println(`Teleport successful! Public UUID: ${data.public_uuid}`);
+            if (data.public_uuid) {
+                this.publicUuid = data.public_uuid;
+            }
             if (this.lastTeleportX !== undefined && this.lastTeleportY !== undefined) {
+
                 const x = this.lastTeleportX;
                 const z = this.lastTeleportY; // y from grid is z in scene
 
