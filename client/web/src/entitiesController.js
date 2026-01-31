@@ -119,7 +119,10 @@ export class EntitiesController {
         const scale = sceneController.scaleFactor;
         const range = 2.5 * scale; // Range in world units (slightly more than 2 grid units)
 
+        const localPublicUuid = this.context.terminal.publicUuid;
+
         for (const [uuid, entity] of this.entities.entries()) {
+            if (uuid === localPublicUuid) continue;
             if (entity.type !== "seeker" && entity.type !== "filter") continue;
 
             const sceneObject = sceneController.objects[uuid];
@@ -129,8 +132,8 @@ export class EntitiesController {
             const distSq = enemyPos.distanceToSquared(playerPos);
 
             if (distSq <= range * range) {
-                // Billboard: Match camera Y rotation to behave like a 2D sprite in 3D
-                const targetRotationY = cameraObject.threeObject.rotation.y;
+                // Billboard: Match camera Y rotation + 180 deg to face the camera
+                const targetRotationY = cameraObject.threeObject.rotation.y + Math.PI;
 
                 const currentRotation = sceneObject.threeObject.rotation;
                 const currentY = currentRotation.y;
