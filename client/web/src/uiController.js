@@ -181,5 +181,26 @@ export class UIController {
             damageEl.remove();
         }, 1500);
     }
+
+    showGain(text, color = "#00ff00") {
+        const gainEl = document.createElement("div");
+        gainEl.className = "damage-number"; // Reuse styling/animation
+        gainEl.innerText = text;
+        gainEl.style.color = color;
+        gainEl.style.textShadow = `0 0 10px #000, 0 0 20px ${color}`;
+
+        // Random slight jitter in position to avoid overlap
+        const jitterX = (Math.random() - 0.5) * 150;
+        const jitterY = (Math.random() - 0.5) * 100 - 50; // Offset upwards slightly
+        gainEl.style.marginLeft = `${jitterX}px`;
+        gainEl.style.marginTop = `${jitterY}px`;
+
+        document.body.appendChild(gainEl);
+
+        // Remove after animation finishes
+        setTimeout(() => {
+            gainEl.remove();
+        }, 1500);
+    }
 }
 

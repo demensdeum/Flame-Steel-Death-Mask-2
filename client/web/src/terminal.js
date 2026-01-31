@@ -11,7 +11,7 @@ export class Terminal {
 
         this.lastTeleportMapId = localStorage.getItem("terminal-last-map-id") || null;
         this.lastTeleportPrivateUuid = null;
-        this.lastHealth = null;
+        this.lastAttributes = null;
         this.lastTeleportX = undefined;
         this.lastTeleportY = undefined;
         this.publicUuid = null;
@@ -666,12 +666,47 @@ export class Terminal {
             if (data.attributes) {
                 this.updateAttributesDisplay(data.attributes);
 
-                const currentHealth = data.attributes.current_health;
-                if (this.lastHealth !== null && currentHealth < this.lastHealth) {
-                    const damage = this.lastHealth - currentHealth;
-                    this.context.uiController.showDamage(damage);
+                const attrs = data.attributes;
+                if (!this.lastAttributes) {
+                    this.lastAttributes = { ...attrs };
+                } else {
+                    const gains = [];
+                    if (attrs.current_health > this.lastAttributes.current_health) {
+                        gains.push(`+${attrs.current_health - this.lastAttributes.current_health} Health`);
+                    }
+                    if (attrs.max_health > this.lastAttributes.max_health) {
+                        gains.push(`+${attrs.max_health - this.lastAttributes.max_health} Max Health`);
+                    }
+                    if (attrs.attack > this.lastAttributes.attack) {
+                        gains.push(`+${attrs.attack - this.lastAttributes.attack} Attack`);
+                    }
+                    if (attrs.defence > this.lastAttributes.defence) {
+                        gains.push(`+${attrs.defence - this.lastAttributes.defence} Defence`);
+                    }
+                    if (attrs.bits > this.lastAttributes.bits) {
+                        gains.push(`+${attrs.bits - this.lastAttributes.bits} Bits`);
+                    }
+                    if (attrs.heal_items > this.lastAttributes.heal_items) {
+                        gains.push(`+${attrs.heal_items - this.lastAttributes.heal_items} Heal Items`);
+                    }
+
+                    if (this.context.uiController) {
+                        gains.forEach((gain, index) => {
+                            // Slight delay between each gain animation to make them distinct
+                            setTimeout(() => {
+                                this.context.uiController.showGain(gain);
+                            }, index * 200);
+                        });
+
+                        // Still handle damage animation separately
+                        if (attrs.current_health < this.lastAttributes.current_health) {
+                            const damage = this.lastAttributes.current_health - attrs.current_health;
+                            this.context.uiController.showDamage(damage);
+                        }
+                    }
+
+                    this.lastAttributes = { ...attrs };
                 }
-                this.lastHealth = currentHealth;
 
                 if (data.attributes.current_health <= 0) {
                     this.println("Health critical! Emergency teleport to Respawn Hub...");
