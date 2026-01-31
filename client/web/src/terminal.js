@@ -550,8 +550,42 @@ export class Terminal {
 
                         this.context.sceneController.moveObjectTo(Names.Camera, x, height, z);
 
-                        // Orient camera based on current facing angle
-                        const rad = (this.context.navigationController.facingAngle * Math.PI) / 180;
+                        // Scan for the longest free space direction
+                        const directions = [
+                            { angle: 0, dx: 1, dy: 0 },   // Right
+                            { angle: 90, dx: 0, dy: 1 },  // Down
+                            { angle: 180, dx: -1, dy: 0 }, // Left
+                            { angle: 270, dx: 0, dy: -1 } // Up
+                        ];
+
+                        let bestAngle = 0;
+                        let maxFreeSpace = -1;
+
+                        directions.forEach(dir => {
+                            let freeSpace = 0;
+                            let checkX = x + dir.dx;
+                            let checkY = z + dir.dy;
+
+                            while (
+                                checkY >= 0 && checkY < grid.length &&
+                                checkX >= 0 && checkX < grid[checkY].length &&
+                                grid[checkY][checkX] === '_'
+                            ) {
+                                freeSpace++;
+                                checkX += dir.dx;
+                                checkY += dir.dy;
+                            }
+
+                            if (freeSpace > maxFreeSpace) {
+                                maxFreeSpace = freeSpace;
+                                bestAngle = dir.angle;
+                            }
+                        });
+
+                        this.context.navigationController.facingAngle = bestAngle;
+
+                        // Orient camera based on the scanned best angle
+                        const rad = (bestAngle * Math.PI) / 180;
                         const lookDistance = 1;
                         const targetX = x + Math.cos(rad) * lookDistance;
                         const targetZ = z + Math.sin(rad) * lookDistance;
@@ -560,6 +594,7 @@ export class Terminal {
                         this.context.sceneController.orbitControls.target.set(targetX * s, height * s, targetZ * s);
                         this.context.sceneController.orbitControls.update();
                         this.context.minimapController.update();
+                        this.context.navigationController.updateCameraRotation();
                     }
                 } catch (e) {
                     console.error("Terminal: error during map reconstruction:", e);
