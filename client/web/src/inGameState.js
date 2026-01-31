@@ -9,6 +9,7 @@ export class InGameState extends State {
         this.context.sceneController.setOrbitControlsEnabled(false);
     }
     step() {
+        this.context.entitiesController.step();
         // this.context.sceneController.switchSkyboxIfNeeded({
         //     name: "com.demensdeum.blue.field",
         //     environmentOnly: false

@@ -108,4 +108,66 @@ export class EntitiesController {
         this.entities.delete(uuid);
         console.log(`Removed entity ${uuid}`);
     }
+
+    step() {
+        const localPublicUuid = this.context.terminal.publicUuid;
+        const playerX = this.context.terminal.lastTeleportX;
+        const playerY = this.context.terminal.lastTeleportY;
+
+        if (playerX === undefined || playerY === undefined) return;
+
+        const sceneController = this.context.sceneController;
+
+        for (const [uuid, entity] of this.entities.entries()) {
+            if (uuid === localPublicUuid) continue;
+            if (entity.type !== "seeker" && entity.type !== "filter") continue;
+
+            const dx = entity.x - playerX;
+            const dy = entity.y - playerY;
+            const distance = Math.abs(dx) + Math.abs(dy);
+
+            if (distance <= 2) {
+                // Determine target rotation based on relative position
+                // 0 degrees is positive X (right)
+                // 90 degrees is positive Z (down/back)
+                // 180 degrees is negative X (left)
+                // 270 degrees is negative Z (up/forward)
+
+                let targetRotationY = 0;
+                if (dx === 1 && dy === 0) targetRotationY = Math.PI; // Player is to the left
+                else if (dx === -1 && dy === 0) targetRotationY = 0; // Player is to the right
+                else if (dx === 0 && dy === 1) targetRotationY = Math.PI * 1.5; // Player is forward
+                else if (dx === 0 && dy === -1) targetRotationY = Math.PI * 0.5; // Player is backward
+                else if (Math.abs(dx) === 1 && Math.abs(dy) === 1) {
+                    // Diagonal (distance 2)
+                    targetRotationY = Math.atan2(-dy, -dx);
+                } else if (Math.abs(dx) === 2 && dy === 0) {
+                    targetRotationY = dx > 0 ? Math.PI : 0;
+                } else if (dx === 0 && Math.abs(dy) === 2) {
+                    targetRotationY = dy > 0 ? Math.PI * 1.5 : Math.PI * 0.5;
+                } else {
+                    continue; // Skip if no specific logic for this distance
+                }
+
+                const currentRotation = sceneController.sceneObject(uuid).threeObject.rotation;
+                const currentY = currentRotation.y;
+
+                // Normalize rotation difference to [-PI, PI]
+                let diff = targetRotationY - currentY;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+
+                // Smoothing factor
+                const smoothing = 0.1;
+                if (Math.abs(diff) > 0.01) {
+                    sceneController.rotateObjectTo(
+                        uuid,
+                        currentRotation.x,
+                        currentY + diff * smoothing,
+                        currentRotation.z
+                    );
+                }
+            }
+        }
+    }
 }
