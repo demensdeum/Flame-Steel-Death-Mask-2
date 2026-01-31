@@ -718,6 +718,11 @@ export class Terminal {
         line.textContent = text;
         line.style.whiteSpace = "pre-wrap";
         this.outputArea.appendChild(line);
+
+        while (this.outputArea.children.length > 1000) {
+            this.outputArea.removeChild(this.outputArea.firstChild);
+        }
+
         this.outputArea.scrollTop = this.outputArea.scrollHeight;
     }
 
