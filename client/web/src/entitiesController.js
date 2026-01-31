@@ -130,7 +130,7 @@ export class EntitiesController {
 
             if (distSq <= range * range) {
                 // Billboard: Match camera Y rotation to behave like a 2D sprite in 3D
-                const targetRotationY = cameraObject.threeObject.rotation.y + Math.PI / 2 + Math.PI;
+                const targetRotationY = cameraObject.threeObject.rotation.y;
 
                 const currentRotation = sceneObject.threeObject.rotation;
                 const currentY = currentRotation.y;
