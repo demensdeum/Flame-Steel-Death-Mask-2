@@ -349,7 +349,7 @@ export class NavigationController {
 
         const startPos = sceneController.sceneObjectPosition(Names.Camera);
         const rad = (this.facingAngle * Math.PI) / 180;
-        const bumpDist = 0.3;
+        const bumpDist = 0.06;
         const duration = 150; // ms
 
         const startTime = performance.now();
