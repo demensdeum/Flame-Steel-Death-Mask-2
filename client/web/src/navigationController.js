@@ -94,6 +94,7 @@ export class NavigationController {
         });
         upButton?.addEventListener("pointerup", () => this.forwardPressed = false);
         upButton?.addEventListener("pointerleave", () => this.forwardPressed = false);
+        upButton?.addEventListener("contextmenu", (e) => e.preventDefault());
 
         downButton?.addEventListener("pointerdown", () => {
             this.backwardPressed = true;
@@ -101,6 +102,7 @@ export class NavigationController {
         });
         downButton?.addEventListener("pointerup", () => this.backwardPressed = false);
         downButton?.addEventListener("pointerleave", () => this.backwardPressed = false);
+        downButton?.addEventListener("contextmenu", (e) => e.preventDefault());
 
         leftButton?.addEventListener("pointerdown", () => {
             this.leftPressed = true;
@@ -108,6 +110,7 @@ export class NavigationController {
         });
         leftButton?.addEventListener("pointerup", () => this.leftPressed = false);
         leftButton?.addEventListener("pointerleave", () => this.leftPressed = false);
+        leftButton?.addEventListener("contextmenu", (e) => e.preventDefault());
 
         rightButton?.addEventListener("pointerdown", () => {
             this.rightPressed = true;
@@ -115,10 +118,15 @@ export class NavigationController {
         });
         rightButton?.addEventListener("pointerup", () => this.rightPressed = false);
         rightButton?.addEventListener("pointerleave", () => this.rightPressed = false);
+        rightButton?.addEventListener("contextmenu", (e) => e.preventDefault());
 
         document.getElementById("nav-attack")?.addEventListener("click", () => this.attack());
+        document.getElementById("nav-attack")?.addEventListener("contextmenu", (e) => e.preventDefault());
         document.getElementById("nav-unlock")?.addEventListener("click", () => this.unlock());
+        document.getElementById("nav-unlock")?.addEventListener("contextmenu", (e) => e.preventDefault());
         document.getElementById("nav-heal")?.addEventListener("click", () => this.heal());
+        document.getElementById("nav-heal")?.addEventListener("contextmenu", (e) => e.preventDefault());
+        document.getElementById("terminal-toggle")?.addEventListener("contextmenu", (e) => e.preventDefault());
     }
 
     rotateLeft() {
