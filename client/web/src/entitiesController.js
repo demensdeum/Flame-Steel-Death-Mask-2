@@ -1,4 +1,3 @@
-import { Names } from "./names.js";
 export class EntitiesController {
     constructor(context) {
         this.context = context;
@@ -151,7 +150,7 @@ export class EntitiesController {
                         uuid,
                         currentRotation.x,
                         currentY + diff * smoothing,
-                        currentRotation.z
+                        currentRotation.z + Math.PI / 2
                     );
                 }
             }
