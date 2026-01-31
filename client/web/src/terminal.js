@@ -542,6 +542,24 @@ export class Terminal {
                         this.lastTeleportY = randomCell.y;
 
                         this.sendTeleport(mapId, randomCell.x, randomCell.y, privateUuid);
+
+                        // Explicitly set camera position for the initial spawn since teleport visuals are ignored
+                        const x = randomCell.x;
+                        const z = randomCell.y;
+                        const height = 1;
+
+                        this.context.sceneController.moveObjectTo(Names.Camera, x, height, z);
+
+                        // Orient camera based on current facing angle
+                        const rad = (this.context.navigationController.facingAngle * Math.PI) / 180;
+                        const lookDistance = 1;
+                        const targetX = x + Math.cos(rad) * lookDistance;
+                        const targetZ = z + Math.sin(rad) * lookDistance;
+
+                        const s = this.context.sceneController.scaleFactor;
+                        this.context.sceneController.debugControls.target.set(targetX * s, height * s, targetZ * s);
+                        this.context.sceneController.debugControls.update();
+                        this.context.minimapController.update();
                     }
                 } catch (e) {
                     console.error("Terminal: error during map reconstruction:", e);
