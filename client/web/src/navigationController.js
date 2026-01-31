@@ -286,12 +286,7 @@ export class NavigationController {
                 requestAnimationFrame(animate);
             } else {
                 // Finished
-                terminal.sendTeleport(
-                    terminal.lastTeleportMapId,
-                    nextX,
-                    nextY,
-                    terminal.lastTeleportPrivateUuid
-                );
+                terminal.syncPlayerPosition();
                 this.lastMoveTime = Date.now();
                 this.moving = false;
                 sceneController.isCameraMoving = false;

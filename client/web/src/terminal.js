@@ -421,6 +421,24 @@ export class Terminal {
         }));
     }
 
+    syncPlayerPosition() {
+        if (!this.lastTeleportMapId || !this.lastTeleportPrivateUuid) {
+            return;
+        }
+
+        const sceneController = this.context.sceneController;
+        const position = sceneController.sceneObjectPosition(Names.Camera);
+        const scale = sceneController.scale;
+
+        const x = Math.round(position.x);
+        const y = Math.round(position.z);
+
+        this.lastTeleportX = x;
+        this.lastTeleportY = y;
+
+        this.sendTeleport(this.lastTeleportMapId, x, y, this.lastTeleportPrivateUuid);
+    }
+
 
     handleServerResponse(data) {
 
@@ -730,7 +748,7 @@ export class Terminal {
                     if (playerEntity.x !== this.lastTeleportX || playerEntity.y !== this.lastTeleportY) {
                         console.warn(`Sync mismatch! Client: (${this.lastTeleportX}, ${this.lastTeleportY}), Server: (${playerEntity.x}, ${playerEntity.y})`);
                         // Auto-correct server
-                        this.sendTeleport(this.lastTeleportMapId, this.lastTeleportX, this.lastTeleportY, this.lastTeleportPrivateUuid);
+                        this.syncPlayerPosition();
                     }
                 }
             }

@@ -89,6 +89,9 @@ export class SceneController {
         this.pointLights = {};
         this.ambientLight = null;
     }
+    get scale() {
+        return this.scaleFactor;
+    }
     lockOrbitControls() {
         this.orbitControls.maxPolarAngle = Math.PI / 2 - Utils.degreesToRadians(50);
         this.orbitControls.minDistance = 2.8;
