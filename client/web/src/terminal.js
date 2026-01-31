@@ -631,33 +631,16 @@ export class Terminal {
             if (data.public_uuid) {
                 this.publicUuid = data.public_uuid;
             }
-            if (this.lastTeleportX !== undefined && this.lastTeleportY !== undefined) {
 
-                const x = this.lastTeleportX;
-                const z = this.lastTeleportY; // y from grid is z in scene
+            // IGNORE SERVER VISUAL UPDATES - CLIENT AUTHORITATIVE
+            // We only keep the secondary triggers (polling, map transitions)
+            if (this.context.entitiesController) {
+                this.context.entitiesController.startPolling();
 
-                if (this.context.navigationController.isForwardOrBackwardPressed()) {
-                    this.println(`Skipping camera teleport as movement buttons are pressed.`);
-                    return;
-                }
+                if (this.lastTeleportX !== undefined && this.lastTeleportY !== undefined) {
+                    const x = this.lastTeleportX;
+                    const z = this.lastTeleportY;
 
-                const height = 1;
-                this.context.sceneController.moveObjectTo(Names.Camera, x, height, z);
-
-                // Respect the current facing direction from NavigationController
-                const rad = (this.context.navigationController.facingAngle * Math.PI) / 180;
-                const lookDistance = 1;
-                const targetX = x + Math.cos(rad) * lookDistance;
-                const targetZ = z + Math.sin(rad) * lookDistance;
-
-                const s = this.context.sceneController.scaleFactor;
-                this.context.sceneController.debugControls.target.set(targetX * s, height * s, targetZ * s);
-                this.context.sceneController.debugControls.update();
-                this.context.minimapController.update();
-                this.println(`Camera moved to player position: (${x}, ${z})`);
-
-                if (this.context.entitiesController) {
-                    this.context.entitiesController.startPolling();
                     // Check if player is on a teleport entity
                     for (const entity of this.context.entitiesController.entities.values()) {
                         if (entity.type === 'teleport' && entity.x === x && entity.y === z) {
@@ -685,6 +668,18 @@ export class Terminal {
 
             if (this.context.entitiesController) {
                 this.context.entitiesController.reconcile(data.entities);
+            }
+
+            // Sync check: Ensure player position is consistent
+            if (this.publicUuid && data.entities) {
+                const playerEntity = data.entities.find(e => e.public_uuid === this.publicUuid);
+                if (playerEntity) {
+                    if (playerEntity.x !== this.lastTeleportX || playerEntity.y !== this.lastTeleportY) {
+                        console.warn(`Sync mismatch! Client: (${this.lastTeleportX}, ${this.lastTeleportY}), Server: (${playerEntity.x}, ${playerEntity.y})`);
+                        // Auto-correct server
+                        this.sendTeleport(this.lastTeleportMapId, this.lastTeleportX, this.lastTeleportY, this.lastTeleportPrivateUuid);
+                    }
+                }
             }
         } else if (data.status === "OK") {
 
