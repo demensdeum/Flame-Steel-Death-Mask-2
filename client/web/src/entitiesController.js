@@ -129,12 +129,8 @@ export class EntitiesController {
             const distSq = enemyPos.distanceToSquared(playerPos);
 
             if (distSq <= range * range) {
-                // Calculate target rotation to face the player using world coords
-                // atan2(dz, dx) for angle in XZ plane
-                const targetRotationY = Math.atan2(
-                    playerPos.z - enemyPos.z,
-                    playerPos.x - enemyPos.x
-                ) + Math.PI / 2 + Math.PI;
+                // Billboard: Match camera Y rotation to behave like a 2D sprite in 3D
+                const targetRotationY = cameraObject.threeObject.rotation.y + Math.PI / 2 + Math.PI;
 
                 const currentRotation = sceneObject.threeObject.rotation;
                 const currentY = currentRotation.y;
