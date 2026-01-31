@@ -9,7 +9,7 @@ export class Terminal {
         this.historyIndex = -1;
         this.currentInput = "";
 
-        this.lastTeleportMapId = null;
+        this.lastTeleportMapId = localStorage.getItem("terminal-last-map-id") || null;
         this.lastTeleportPrivateUuid = null;
         this.lastTeleportX = undefined;
         this.lastTeleportY = undefined;
@@ -117,6 +117,13 @@ export class Terminal {
             this.attributesPollInterval = null;
         }
         this.privateUuidForAttributes = null;
+    }
+
+    saveMapId(id) {
+        if (id) {
+            this.lastTeleportMapId = id;
+            localStorage.setItem("terminal-last-map-id", id);
+        }
     }
 
     updateAttributesDisplay(attributes) {
@@ -265,7 +272,7 @@ export class Terminal {
                 this.println("Error: Missing arguments. Usage: map <map_id> <private_uuid>");
                 return;
             }
-            this.lastTeleportMapId = parts[1];
+            this.saveMapId(parts[1]);
             this.lastTeleportPrivateUuid = parts[2];
             this.socket.send(JSON.stringify({
                 type: "map",
@@ -277,7 +284,7 @@ export class Terminal {
                 this.println("Error: Missing arguments. Usage: teleport <map_id> <x> <y> <private_uuid>");
                 return;
             }
-            this.lastTeleportMapId = parts[1];
+            this.saveMapId(parts[1]);
             this.lastTeleportX = parseInt(parts[2]);
             this.lastTeleportY = parseInt(parts[3]);
             this.lastTeleportPrivateUuid = parts[4];
@@ -555,7 +562,7 @@ export class Terminal {
                         const mapId = data.data.id;
                         const privateUuid = this.lastTeleportPrivateUuid;
 
-                        this.lastTeleportMapId = mapId;
+                        this.saveMapId(mapId);
                         this.lastTeleportX = randomCell.x;
                         this.lastTeleportY = randomCell.y;
 
@@ -637,13 +644,14 @@ export class Terminal {
             }
 
             if (this._joining) {
-                this.println("Joining world map 1...");
+                const joinMapId = this.lastTeleportMapId || "1";
+                this.println(`Joining world map ${joinMapId}...`);
                 this.socket.send(JSON.stringify({
                     type: "map",
-                    id: "1",
+                    id: joinMapId,
                     private_uuid: this._lastRegisterPrivateUuid
                 }));
-                this.lastTeleportMapId = "1";
+                this.saveMapId(joinMapId);
                 this.lastTeleportPrivateUuid = this._lastRegisterPrivateUuid;
                 this._joining = false;
 
