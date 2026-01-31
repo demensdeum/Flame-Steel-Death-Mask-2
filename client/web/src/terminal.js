@@ -693,6 +693,11 @@ export class Terminal {
                 this.println(`Attack successful!`);
                 this.println(`Damage dealt: ${data.damage}`);
                 this.println(`Target health: ${data.target_remaining_health}`);
+
+                if (this.context.uiController) {
+                    this.context.uiController.showDamage(data.damage, "#ffff00");
+                }
+
                 if (data.entity_removed) {
                     this.println(`Target destroyed!`);
                 }

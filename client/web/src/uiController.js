@@ -154,10 +154,12 @@ export class UIController {
         });
     }
 
-    showDamage(amount) {
+    showDamage(amount, color = "#ff0000") {
         const damageEl = document.createElement("div");
         damageEl.className = "damage-number";
         damageEl.innerText = `-${amount}`;
+        damageEl.style.color = color;
+        damageEl.style.textShadow = `0 0 10px #000, 0 0 20px ${color}`;
 
         // Random slight jitter in position
         const jitterX = (Math.random() - 0.5) * 100;

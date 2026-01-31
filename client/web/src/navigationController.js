@@ -336,10 +336,43 @@ export class NavigationController {
         }
 
         if (target) {
+            this.startAttackAnimation();
             terminal.sendAttack(target.public_uuid);
         } else {
             terminal.println("No 'filter' entity in range to attack.");
         }
+    }
+
+    startAttackAnimation() {
+        const sceneController = this.context.sceneController;
+        if (this.moving || sceneController.isCameraMoving) return;
+
+        const startPos = sceneController.sceneObjectPosition(Names.Camera);
+        const rad = (this.facingAngle * Math.PI) / 180;
+        const bumpDist = 0.3;
+        const duration = 150; // ms
+
+        const startTime = performance.now();
+
+        const animate = (time) => {
+            const elapsed = time - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Sine wave for smooth forward and back movement
+            // sin(PI * progress) goes 0 -> 1 -> 0
+            const factor = Math.sin(Math.PI * progress);
+            const currentX = startPos.x + Math.cos(rad) * bumpDist * factor;
+            const currentZ = startPos.z + Math.sin(rad) * bumpDist * factor;
+
+            sceneController.moveObjectTo(Names.Camera, currentX, startPos.y, currentZ);
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                sceneController.moveObjectTo(Names.Camera, startPos.x, startPos.y, startPos.z);
+            }
+        };
+        requestAnimationFrame(animate);
     }
 
     unlock() {
