@@ -59,9 +59,14 @@ export class UIController {
 
     toggleTerminal() {
         const terminal = document.getElementById("terminal");
+        const minimap = document.getElementById("minimap-container");
         if (terminal) {
             this.terminalVisible = !this.terminalVisible;
-            terminal.style.display = this.terminalVisible ? "flex" : "none";
+            const display = this.terminalVisible ? "flex" : "none";
+            terminal.style.display = display;
+            if (minimap) {
+                minimap.style.display = display;
+            }
         }
     }
 
@@ -132,9 +137,12 @@ export class UIController {
         elements.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                if (id.includes("controls") || id === "minimap-container") {
+                if (id.includes("controls")) {
                     console.log(`UIController: showing flex element: ${id}`);
                     el.style.display = "flex";
+                } else if (id === "minimap-container") {
+                    console.log(`UIController: conditional show for : ${id}`);
+                    el.style.display = this.terminalVisible ? "flex" : "none";
                 } else {
                     console.log(`UIController: showing block element: ${id}`);
                     el.style.display = "block";
