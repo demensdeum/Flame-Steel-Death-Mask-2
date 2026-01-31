@@ -83,19 +83,22 @@ export class SceneController {
 
         };
         window.addEventListener("resize", onWindowResize, false);
-        this.debugControls = new OrbitControls(camera, renderer.domElement);
-        debugPrint(this.debugControls);
+        this.orbitControls = new OrbitControls(camera, renderer.domElement);
+        debugPrint(this.orbitControls);
         this.instancedMeshes = {};
         this.pointLights = {};
         this.ambientLight = null;
     }
     lockOrbitControls() {
-        this.debugControls.maxPolarAngle = Math.PI / 2 - Utils.degreesToRadians(50);
-        this.debugControls.minDistance = 2.8;
-        this.debugControls.maxDistance = 3.4;
-        this.debugControls.enablePan = false;
-        this.debugControls.enableDamping = true;
-        this.debugControls.dampingFactor = 0.225;
+        this.orbitControls.maxPolarAngle = Math.PI / 2 - Utils.degreesToRadians(50);
+        this.orbitControls.minDistance = 2.8;
+        this.orbitControls.maxDistance = 3.4;
+        this.orbitControls.enablePan = false;
+        this.orbitControls.enableDamping = true;
+        this.orbitControls.dampingFactor = 0.225;
+    }
+    setOrbitControlsEnabled(enabled) {
+        this.orbitControls.enabled = enabled;
     }
     setFog(color = 0xcccccc, near = 10, far = 30) {
         this.scene.fog = new THREE.Fog(color, near, far);
@@ -265,7 +268,7 @@ export class SceneController {
 
     render() {
         this.renderer.render(this.scene, this.camera);
-        this.debugControls.update();
+        this.orbitControls.update();
     }
 
     addSceneObject(sceneObject) {

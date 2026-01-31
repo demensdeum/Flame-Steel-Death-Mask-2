@@ -157,8 +157,8 @@ export class NavigationController {
             const targetZ = currentPos.z + Math.sin(rad) * lookDistance;
 
             const s = sceneController.scaleFactor;
-            sceneController.debugControls.target.set(targetX * s, currentPos.y * s, targetZ * s);
-            sceneController.debugControls.update();
+            sceneController.orbitControls.target.set(targetX * s, currentPos.y * s, targetZ * s);
+            sceneController.orbitControls.update();
 
             if (progress < 1) {
                 requestAnimationFrame(animate);
@@ -191,8 +191,8 @@ export class NavigationController {
         const targetZ = currentPos.z + Math.sin(rad) * lookDistance;
 
         const s = sceneController.scaleFactor;
-        sceneController.debugControls.target.set(targetX * s, currentPos.y * s, targetZ * s);
-        sceneController.debugControls.update();
+        sceneController.orbitControls.target.set(targetX * s, currentPos.y * s, targetZ * s);
+        sceneController.orbitControls.update();
         this.context.minimapController.update();
     }
 
@@ -271,8 +271,8 @@ export class NavigationController {
             const lookZ = currentZ + Math.sin(rad) * lookDist;
 
             const s = sceneController.scaleFactor;
-            sceneController.debugControls.target.set(lookX * s, startPos.y * s, lookZ * s);
-            sceneController.debugControls.update();
+            sceneController.orbitControls.target.set(lookX * s, startPos.y * s, lookZ * s);
+            sceneController.orbitControls.update();
 
             if (progress < 1) {
                 requestAnimationFrame(animate);

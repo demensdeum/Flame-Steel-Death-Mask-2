@@ -6,6 +6,7 @@ export class InGameState extends State {
     }
     initialize() {
         this.context.sceneController.setBackgroundColor(0x000000);
+        this.context.sceneController.setOrbitControlsEnabled(false);
     }
     step() {
         // this.context.sceneController.switchSkyboxIfNeeded({

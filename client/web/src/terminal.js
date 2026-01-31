@@ -515,8 +515,8 @@ export class Terminal {
 
                     this.context.sceneController.moveObjectTo(Names.Camera, centerX, viewDistance, centerZ);
                     const s = this.context.sceneController.scaleFactor;
-                    this.context.sceneController.debugControls.target.set(centerX * s, 0, centerZ * s);
-                    this.context.sceneController.debugControls.update();
+                    this.context.sceneController.orbitControls.target.set(centerX * s, 0, centerZ * s);
+                    this.context.sceneController.orbitControls.update();
                     this.println("Camera set to top-down view.");
 
                     // Auto-teleport to food/ground if possible
@@ -557,8 +557,8 @@ export class Terminal {
                         const targetZ = z + Math.sin(rad) * lookDistance;
 
                         const s = this.context.sceneController.scaleFactor;
-                        this.context.sceneController.debugControls.target.set(targetX * s, height * s, targetZ * s);
-                        this.context.sceneController.debugControls.update();
+                        this.context.sceneController.orbitControls.target.set(targetX * s, height * s, targetZ * s);
+                        this.context.sceneController.orbitControls.update();
                         this.context.minimapController.update();
                     }
                 } catch (e) {
