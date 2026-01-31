@@ -134,7 +134,7 @@ export class EntitiesController {
                 const targetRotationY = Math.atan2(
                     playerPos.z - enemyPos.z,
                     playerPos.x - enemyPos.x
-                ) - Math.PI / 2;
+                ) + Math.PI / 2 + Math.PI;
 
                 const currentRotation = sceneObject.threeObject.rotation;
                 const currentY = currentRotation.y;
