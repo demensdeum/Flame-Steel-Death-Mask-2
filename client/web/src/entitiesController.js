@@ -71,14 +71,36 @@ export class EntitiesController {
     }
 
     updateEntity(entity) {
-        this.context.sceneController.moveObjectTo(
-            entity.public_uuid,
-            entity.x,
-            1,
-            entity.y
-        );
+        const sceneController = this.context.sceneController;
+        const startPos = sceneController.sceneObjectPosition(entity.public_uuid);
+        const targetX = entity.x;
+        const targetY = 1;
+        const targetZ = entity.y;
+        const duration = 500;
+        const startTime = performance.now();
+
+        const animate = (time) => {
+            const elapsed = time - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            const currentX = startPos.x + (targetX - startPos.x) * progress;
+            const currentZ = startPos.z + (targetZ - startPos.z) * progress;
+
+            sceneController.moveObjectTo(
+                entity.public_uuid,
+                currentX,
+                targetY,
+                currentZ
+            );
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+        requestAnimationFrame(animate);
+
         this.entities.set(entity.public_uuid, entity);
-        console.log(`Updated entity ${entity.public_uuid} to (${entity.x}, ${entity.y})`);
+        console.log(`Smoothly updating entity ${entity.public_uuid} to (${entity.x}, ${entity.y})`);
     }
 
     removeEntity(uuid) {
