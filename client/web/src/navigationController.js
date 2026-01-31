@@ -235,8 +235,9 @@ export class NavigationController {
         const dx = Math.round(Math.cos(rad) * direction);
         const dy = Math.round(Math.sin(rad) * direction);
 
-        const nextX = (terminal.lastTeleportX || 0) + dx;
-        const nextY = (terminal.lastTeleportY || 0) + dy;
+        const currentPos = sceneController.sceneObjectPosition(Names.Camera);
+        const nextX = Math.round(currentPos.x) + dx;
+        const nextY = Math.round(currentPos.z) + dy;
 
         const minimapController = this.context.minimapController;
         if (minimapController && minimapController.grid) {
