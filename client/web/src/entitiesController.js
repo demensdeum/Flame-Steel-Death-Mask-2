@@ -150,8 +150,8 @@ export class EntitiesController {
                     sceneController.rotateObjectTo(
                         uuid,
                         currentRotation.x,
-                        currentY + diff * smoothing,
-                        currentRotation.z + Math.PI / 2
+                        currentY + diff * smoothing + Math.PI / 2,
+                        currentRotation.z
                     );
                 }
             }
