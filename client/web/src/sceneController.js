@@ -441,8 +441,20 @@ export class SceneController {
         const onModelLoadingProgess = (_) => {
         };
         const onModelLoadError = (error) => {
-            debugger;
             debugPrint(`Model loading error: ${error}`);
+            if (sceneObject.loadingRetries === undefined) {
+                sceneObject.loadingRetries = 0;
+            }
+            if (sceneObject.loadingRetries < 5) {
+                sceneObject.loadingRetries++;
+                debugPrint(`Retrying model load (${sceneObject.loadingRetries}/5) for ${modelName} in 3 seconds...`);
+                setTimeout(() => {
+                    modelLoader.load(modelPath, onModelLoaded, onModelLoadingProgess, onModelLoadError);
+                }, 3000);
+            } else {
+                debugPrint(`Model loading failed after 5 retries: ${modelPath}`);
+                debugger;
+            }
         };
         modelLoader.load(modelPath, onModelLoaded, onModelLoadingProgess, onModelLoadError);
     }
@@ -616,7 +628,7 @@ export class SceneController {
         const modelPath = Paths.modelPath(modelName);
         const self = this;
 
-        modelLoader.load(modelPath, (container) => {
+        const onModelLoaded = (container) => {
             const model = container.scene;
             let mesh = null;
 
@@ -649,9 +661,28 @@ export class SceneController {
             } else {
                 debugPrint(`Failed to add instanced model: ${modelName} - no mesh found`);
             }
-        }, undefined, (error) => {
+        };
+        const onModelLoadError = (error) => {
             debugPrint(`Error loading instanced model ${modelName}: ${error}`);
-        });
+            if (self.instancedModelRetries === undefined) {
+                self.instancedModelRetries = {};
+            }
+            if (self.instancedModelRetries[modelName] === undefined) {
+                self.instancedModelRetries[modelName] = 0;
+            }
+
+            if (self.instancedModelRetries[modelName] < 5) {
+                self.instancedModelRetries[modelName]++;
+                debugPrint(`Retrying instanced model load (${self.instancedModelRetries[modelName]}/5) for ${modelName} in 3 seconds...`);
+                setTimeout(() => {
+                    modelLoader.load(modelPath, onModelLoaded, undefined, onModelLoadError);
+                }, 3000);
+            } else {
+                debugPrint(`Instanced model loading failed after 5 retries: ${modelName}`);
+            }
+        };
+
+        modelLoader.load(modelPath, onModelLoaded, undefined, onModelLoadError);
     }
 }
 SceneController.itemSize = 1;
