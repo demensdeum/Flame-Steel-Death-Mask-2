@@ -153,5 +153,24 @@ export class UIController {
             }
         });
     }
+
+    showDamage(amount) {
+        const damageEl = document.createElement("div");
+        damageEl.className = "damage-number";
+        damageEl.innerText = `-${amount}`;
+
+        // Random slight jitter in position
+        const jitterX = (Math.random() - 0.5) * 100;
+        const jitterY = (Math.random() - 0.5) * 50;
+        damageEl.style.marginLeft = `${jitterX}px`;
+        damageEl.style.marginTop = `${jitterY}px`;
+
+        document.body.appendChild(damageEl);
+
+        // Remove after animation finishes
+        setTimeout(() => {
+            damageEl.remove();
+        }, 1500);
+    }
 }
 

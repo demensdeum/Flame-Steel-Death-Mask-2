@@ -11,6 +11,7 @@ export class Terminal {
 
         this.lastTeleportMapId = localStorage.getItem("terminal-last-map-id") || null;
         this.lastTeleportPrivateUuid = null;
+        this.lastHealth = null;
         this.lastTeleportX = undefined;
         this.lastTeleportY = undefined;
         this.publicUuid = null;
@@ -664,6 +665,13 @@ export class Terminal {
             // Update the attributes display silently (don't print to terminal)
             if (data.attributes) {
                 this.updateAttributesDisplay(data.attributes);
+
+                const currentHealth = data.attributes.current_health;
+                if (this.lastHealth !== null && currentHealth < this.lastHealth) {
+                    const damage = this.lastHealth - currentHealth;
+                    this.context.uiController.showDamage(damage);
+                }
+                this.lastHealth = currentHealth;
 
                 if (data.attributes.current_health <= 0) {
                     this.println("Health critical! Emergency teleport to Respawn Hub...");

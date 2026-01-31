@@ -26,6 +26,35 @@
       -webkit-user-select: none;
       user-select: none;
     }
+
+    @keyframes damage-float {
+      0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 0;
+      }
+      20% {
+        transform: translate(-50%, -80%) scale(1.2);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(-50%, -200%) scale(1.0);
+        opacity: 0;
+      }
+    }
+
+    .damage-number {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 48px;
+      font-weight: bold;
+      color: #ff0000;
+      text-shadow: 0 0 10px #000, 0 0 20px #ff0000;
+      pointer-events: none;
+      z-index: 950;
+      animation: damage-float 1.5s ease-out forwards;
+    }
   </style>
 </head>
 
