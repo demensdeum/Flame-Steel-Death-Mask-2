@@ -1,3 +1,4 @@
+import { Names } from "./names.js";
 export class EntitiesController {
     constructor(context) {
         this.context = context;
