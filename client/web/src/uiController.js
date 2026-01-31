@@ -35,6 +35,13 @@ export class UIController {
                 }
             });
         }
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "`" || event.key === "~" || event.key === "ё" || event.key === "Ё") {
+                event.preventDefault();
+                this.toggleTerminal();
+            }
+        });
     }
 
 
