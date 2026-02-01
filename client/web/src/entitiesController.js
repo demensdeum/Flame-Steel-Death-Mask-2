@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { Names } from "./names.js";
 export class EntitiesController {
     constructor(context) {
@@ -116,9 +117,6 @@ export class EntitiesController {
         if (!cameraObject || !cameraObject.threeObject) return;
 
         const playerPos = cameraObject.threeObject.position;
-        const scale = sceneController.scaleFactor;
-        const range = 2.5 * scale; // Range in world units (slightly more than 2 grid units)
-
         const localPublicUuid = this.context.terminal.publicUuid;
 
         for (const [uuid, entity] of this.entities.entries()) {
@@ -128,23 +126,20 @@ export class EntitiesController {
             const sceneObject = sceneController.objects[uuid];
             if (!sceneObject || !sceneObject.threeObject) continue;
 
+            // Calculate direction from enemy to player
             const enemyPos = sceneObject.threeObject.position;
-            const distSq = enemyPos.distanceToSquared(playerPos);
+            const dx = playerPos.x - enemyPos.x;
+            const dz = playerPos.z - enemyPos.z;
 
-            if (distSq <= range * range) {
-                // Directional rotation: Use camera's current rotation + 180 degrees (reverse)
-                const cameraRotationY = cameraObject.threeObject.rotation.y;
-                const targetRotationY = cameraRotationY + Math.PI; // Add 180 degrees (PI radians)
+            // Calculate rotation angle to face the player
+            const targetRotationY = Math.atan2(dx, dz);
 
-                const currentRotation = sceneObject.threeObject.rotation;
+            // Create quaternion from Y-axis rotation
+            const targetQuaternion = new THREE.Quaternion();
+            targetQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetRotationY);
 
-                sceneController.rotateObjectTo(
-                    uuid,
-                    currentRotation.x,
-                    targetRotationY,
-                    currentRotation.z
-                );
-            }
+            // Apply quaternion to the object
+            sceneObject.threeObject.quaternion.copy(targetQuaternion);
         }
     }
 }
