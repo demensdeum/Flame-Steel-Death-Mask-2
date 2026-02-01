@@ -132,8 +132,10 @@ export class EntitiesController {
             const distSq = enemyPos.distanceToSquared(playerPos);
 
             if (distSq <= range * range) {
-                // Billboard: Match camera Y rotation + 360 deg (0) to face the camera (for inverted model)
-                const targetRotationY = cameraObject.threeObject.rotation.y;
+                // Directional rotation: Snap to camera's cardinal orientation + 180 degrees (reverse)
+                const facingAngle = this.context.navigationController.facingAngle;
+                const reverseAngle = (facingAngle + 180) % 360;
+                const targetRotationY = (reverseAngle * Math.PI) / 180;
 
                 const currentRotation = sceneObject.threeObject.rotation;
                 const currentY = currentRotation.y;
