@@ -132,10 +132,9 @@ export class EntitiesController {
             const distSq = enemyPos.distanceToSquared(playerPos);
 
             if (distSq <= range * range) {
-                // Directional rotation: Snap to camera's cardinal orientation + 180 degrees (reverse)
-                const facingAngle = this.context.navigationController.facingAngle;
-                const reverseAngle = (facingAngle + 180) % 360;
-                const targetRotationY = (reverseAngle * Math.PI) / 180;
+                // Directional rotation: Use camera's current rotation + 180 degrees (reverse)
+                const cameraRotationY = cameraObject.threeObject.rotation.y;
+                const targetRotationY = cameraRotationY + Math.PI; // Add 180 degrees (PI radians)
 
                 const currentRotation = sceneObject.threeObject.rotation;
 

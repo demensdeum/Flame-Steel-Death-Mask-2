@@ -142,7 +142,7 @@ export class NavigationController {
         if (this.moving || sceneController.isCameraMoving) return;
 
         const startAngle = this.facingAngle;
-        const targetAngle = (Math.round(startAngle + (direction * 90)) + 360) % 360;
+        const targetAngle = ((startAngle + (direction * 90)) % 360 + 360) % 360;
         this.facingAngle = targetAngle;
 
         this.moving = true;
