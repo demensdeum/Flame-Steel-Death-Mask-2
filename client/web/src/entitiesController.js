@@ -117,6 +117,8 @@ export class EntitiesController {
         if (!cameraObject || !cameraObject.threeObject) return;
 
         const playerPos = cameraObject.threeObject.position;
+        const scale = sceneController.scaleFactor;
+        const range = 3 * scale; // 3 grid units
         const localPublicUuid = this.context.terminal.publicUuid;
 
         for (const [uuid, entity] of this.entities.entries()) {
@@ -129,16 +131,21 @@ export class EntitiesController {
             const enemyPos = sceneObject.threeObject.position;
             const dx = playerPos.x - enemyPos.x;
             const dz = playerPos.z - enemyPos.z;
+            const distSq = dx * dx + dz * dz;
 
-            // Calculate rotation angle to face the player
-            const targetRotationY = Math.atan2(dx, dz);
+            // Only rotate if within 3 cells
+            if (distSq <= range * range) {
+                // Calculate rotation angle to face the player
+                const targetRotationY = Math.atan2(dx, dz);
 
-            // Create quaternion from Y-axis rotation
-            const targetQuaternion = new THREE.Quaternion();
-            targetQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetRotationY);
+                // Create quaternion from Y-axis rotation
+                const targetQuaternion = new THREE.Quaternion();
+                targetQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetRotationY);
 
-            // Apply quaternion to the object
-            sceneObject.threeObject.quaternion.copy(targetQuaternion);
+                // Smoothly interpolate to target rotation using slerp
+                const smoothingFactor = 0.1;
+                sceneObject.threeObject.quaternion.slerp(targetQuaternion, smoothingFactor);
+            }
         }
     }
 }
