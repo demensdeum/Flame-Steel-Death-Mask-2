@@ -138,23 +138,13 @@ export class EntitiesController {
                 const targetRotationY = (reverseAngle * Math.PI) / 180;
 
                 const currentRotation = sceneObject.threeObject.rotation;
-                const currentY = currentRotation.y;
 
-                // Normalize rotation difference to [-PI, PI]
-                let diff = targetRotationY - currentY;
-                while (diff > Math.PI) diff -= Math.PI * 2;
-                while (diff < -Math.PI) diff += Math.PI * 2;
-
-                // Smoothing factor
-                const smoothing = 0.08;
-                if (Math.abs(diff) > 0.01) {
-                    sceneController.rotateObjectTo(
-                        uuid,
-                        currentRotation.x,
-                        currentY + diff * smoothing,
-                        currentRotation.z
-                    );
-                }
+                sceneController.rotateObjectTo(
+                    uuid,
+                    currentRotation.x,
+                    targetRotationY,
+                    currentRotation.z
+                );
             }
         }
     }

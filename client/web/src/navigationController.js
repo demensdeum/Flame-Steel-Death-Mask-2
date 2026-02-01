@@ -141,11 +141,13 @@ export class NavigationController {
         const sceneController = this.context.sceneController;
         if (this.moving || sceneController.isCameraMoving) return;
 
+        const startAngle = this.facingAngle;
+        const targetAngle = (Math.round(startAngle + (direction * 90)) + 360) % 360;
+        this.facingAngle = targetAngle;
+
         this.moving = true;
         sceneController.isCameraMoving = true;
 
-        const startAngle = this.facingAngle;
-        const targetAngle = startAngle + (direction * 90);
         const startTime = performance.now();
 
         const currentPos = sceneController.sceneObjectPosition(Names.Camera);
@@ -172,7 +174,6 @@ export class NavigationController {
                 requestAnimationFrame(animate);
             } else {
                 // Finished
-                this.facingAngle = (Math.round(targetAngle) + 360) % 360;
                 this.moving = false;
                 sceneController.isCameraMoving = false;
                 this.updateCameraRotation(); // Ensure final snap is exact
