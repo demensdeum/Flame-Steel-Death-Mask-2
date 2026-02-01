@@ -121,7 +121,6 @@ export class EntitiesController {
 
         for (const [uuid, entity] of this.entities.entries()) {
             if (uuid === localPublicUuid) continue;
-            if (entity.type !== "seeker" && entity.type !== "filter") continue;
 
             const sceneObject = sceneController.objects[uuid];
             if (!sceneObject || !sceneObject.threeObject) continue;
